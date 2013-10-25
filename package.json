@@ -1,6 +1,6 @@
 {
   "name": "tupaijs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "http://tupaijs.com/",
   "bugs": {
     "url": "https://github.com/deyunanhai/tupai.js/issues"
@@ -26,7 +26,7 @@
   "readmeFilename": "README.md",
   "dependencies" : {
     "phantomjs": "1.9.0-3",
-    "js_analysis": "0.0.7",
+    "js_analysis": "0.0.8",
     "html-minifier": "0.5.2",
     "yuicompressor": "2.4.8",
     "ejs": "0.8.4",
