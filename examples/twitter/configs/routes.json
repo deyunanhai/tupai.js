@@ -1,0 +1,4 @@
+{
+    "/root": "twitter.RootViewController",
+    "/root/timeline": "twitter.TimeLineViewController"
+}

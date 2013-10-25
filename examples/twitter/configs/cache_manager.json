@@ -1,0 +1,11 @@
+{
+    "timeline": {
+        "config": {
+            "memCache": {
+                "limit": 100,
+                "overflowRemoveSize": 20
+            },
+            "localStorage": false
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "name": "jsonp",
+    "version": "0.0.1",
+    "package": "jsonp",
+    "server": {
+        "routers": {
+            "/*.json": {
+                "path": "./testdatas/{0}.json",
+                "template": true
+            }
+        },
+        "port": 9800
+    }
+}

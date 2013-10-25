@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+
+var path = require('path');
+var spawn = require('child_process').spawn;
+var fs = require('fs');
+
+var http = require('http');
+var express = require('express');
+
+var baseDir = path.resolve(__dirname, "..");
+var tupai = require(path.join(baseDir, 'scripts', 'nodejs'));
+
+function toInt(val) {
+    return Number(val);
+}
+
+function toBoolean(val) {
+    if(val == undefined) return false;
+    else if(typeof val === 'boolean') return val;
+    else {
+        var v = val.toLowerCase();
+        return (["true", "yes", "ok"].indexOf(v) >= 0);
+    }
+}
+
+var program = require('commander');
+program
+.version(require(path.join(baseDir, 'tupai.js')).version);
+
+program
+.command('server')
+.option('-t, --target <target>', 'target [debug|release] default is debug')
+.option('-p, --printLog', 'print log to stdout. default is off')
+//.description('start test server to run application')
+.action(function(options) {
+    tupai.startServer(options);
+});
+
+var mConfig = tupai.getConfig();
+program
+.command('configs')
+//.description('generate template html to javascript file')
+.option('-i, --inputDir <inputDir>', 'configs directory, default is ' + mConfig.configs)
+.option('-o, --outputDir <outputDir>', 'output directory, default is ' + mConfig.genConfigs)
+.option('-c, --fullClassName <fullClassName>', 'Configs full class name, default is Config')
+.action(function(options) {
+    tupai.compileConfigSync(
+        (options.inputDir || mConfig.configs),
+        (options.outputDir || mConfig.genConfigs),
+        (options.fullClassName || 'Config')
+    );
+});
+
+program
+.command('template <input> <outputDir> <packageName>')
+//.description('generate template html to javascript file')
+.option('-m, --minify <minify>', 'need minify html default is true', toBoolean, true)
+.action(function(input, outputDir, packageName, options) {
+    tupai.compileTemplate(input, outputDir, packageName, options);
+});
+
+program
+.command('templates <inputDir> <outputDir> [packageName]')
+//.description('generate template htmls to javascript file')
+.option('-m, --minify <minify>', 'need minify html default is true', toBoolean, true)
+.action(function(inputDir, outputDir, packageName, options) {
+    tupai.compileTemplates(inputDir, outputDir, packageName, options);
+});
+
+['merge', 'check', 'list'].forEach(function(name) {
+    program
+    .command(name)
+    .option('-c, --classPath <classPath>', 'classPath')
+    .option('-t, --targetClasses <classes>', 'target classes')
+    .option('-f, --targetClassesFile <file>', 'target classes file')
+    .option('-o, --output <file>', 'output file name')
+    .option('-A, --append', 'append to output file')
+    .option('--noLog', 'classPath')
+    .option('--isTupaiCore', 'true if is tupai core build')
+    .option('--ignoreNotFound', 'ignore not found classes')
+    //.description('merge tupai javascript classes to one file')
+    .action(function(options) {
+        var o = {};
+        [
+        'classPath', 'targetClasses', 'targetClassesFile', 'output',
+        'append', 'noLog', 'isTupaiCore', 'ignoreNotFound'
+        ].forEach(function(name) {
+            if(options.hasOwnProperty(name)) {
+                o[name] = options[name];
+            }
+        });
+        tupai.merge(name, o);
+    });
+});
+
+program
+.command('compress [file]')
+.option('-t, --type <js|css>', 'Specifies the type of the input file')
+.option('-o, --output <output>', 'Place the output into <file>. Defaults to stdout.')
+.action(function(file, options) {
+    tupai.compress(file, options);
+});
+
+program
+.command('new <name>')
+.option('-p, --package <packageName>', 'package name')
+.option('--usePackage2', 'use package2 instead of package.')
+.action(function(name, options) {
+    tupai.createProject(name, options);
+});
+
+program
+.command('make [debug|release|clean]')
+.action(function(target, options) {
+    tupai.make(target, options);
+});
+
+['generate', 'g'].forEach(function(cmdName) {
+    program
+    .command(cmdName + ' <controller|view|template|endpoint> <name>')
+    .option('-t, --templateType <templateType>', 'template type')
+    .option('-c, --templateClass <templateClass>', 'template full class name')
+    .action(function(type, name, options) {
+        if(['controller', 'view', 'template', 'endpoint'].indexOf(type) < 0) {
+            return options.help();
+        }
+        tupai.generators[type](name, options);
+    });
+});
+
+program.on('*', function() {
+    program.help();
+});
+
+
+program.parse(process.argv);
+
+if (!program.args.length) {
+    program.help();
+}
+

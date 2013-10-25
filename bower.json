@@ -1,0 +1,40 @@
+{
+  "name": "tupaijs",
+  "main": "releases/web/tupai-last.min.js",
+  "version": "0.1.0",
+  "authors": [
+    "bocelli.hu <bocelli.hu@gmail.com>"
+  ],
+  "description": "tupai.js is a minimal and flexible javascript mvc framework. providing a robust set of features for building single and multi-page",
+  "keywords": [
+    "javascript",
+    "mvc",
+    "framework",
+    "router",
+    "web",
+    "large",
+    "fast",
+    "template",
+    "rich client"
+  ],
+  "license": "MIT",
+  "dependencies" : {
+  },
+  "ignore": [
+    "node_modules",
+    "bower_components",
+    "tp-iframe.html",
+    "docs",
+    "bin",
+    "libs",
+    "*.json",
+    "examples",
+    "scripts",
+    "src",
+    "templates",
+    "tupai.js",
+    "Makefile",
+    "**/*.mk",
+    "tests"
+  ]
+}

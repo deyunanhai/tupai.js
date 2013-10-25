@@ -1,0 +1,12 @@
+{
+  "name": "transit",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "readmeFilename": "README.md",
+  "dependencies": {
+      "tupaijs": "*"
+  },
+  "devDependencies": {
+  }
+}

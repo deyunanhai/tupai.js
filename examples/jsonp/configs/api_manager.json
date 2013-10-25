@@ -1,0 +1,16 @@
+{
+    "client": {
+        "type": "jsonp"
+    },
+    "responseDelegate": {
+        "classzz": "jsonp.ResponseDelegate"
+    },
+    "apiParameterMap": {
+        "timeline": {
+            "search": {
+                "method": "GET",
+                "url": "/timeline.json"
+            }
+        }
+    }
+}

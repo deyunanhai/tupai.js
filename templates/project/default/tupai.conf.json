@@ -1,0 +1,19 @@
+{
+    "name": "<%=project.name%>",
+    "version": "<%=project.version%>",
+    "package": "<%=project.package%>",
+    "server": {
+        "proxies": {
+            "/search": "http://api.host:8080/search",
+            "/api2": "http://api.host:8080/"
+        },
+        "routers": {
+            "/src/*": "./src/{0}",
+            "/*.json": {
+                "path": "./testdatas/{0}.json",
+                "template": true
+            }
+        },
+        "port": <%=server.port%>
+    }
+}

@@ -1,0 +1,59 @@
+{
+  "name": "tupaijs",
+  "version": "0.1.0",
+  "homepage": "http://tupaijs.com/",
+  "bugs": {
+    "url": "https://github.com/deyunanhai/tupai.js/issues"
+  },
+  "description": "tupai.js is a minimal and flexible javascript mvc framework. providing a robust set of features for building single and multi-page",
+  "author": {
+    "name": "bocelli.hu",
+    "email": "bocelli.hu@gmail.com"
+  },
+  "main": "tupai.js",
+  "bin": {
+    "tupaijs": "./bin/tupaijs"
+  },
+  "scripts": {
+    "test": "NODE_ENV=test ./tests/run.js"
+  },
+  "licenses" : [
+    {
+      "type" : "MIT",
+      "url" : "http://tupaijs.com/license.html"
+    }
+  ],
+  "readmeFilename": "README.md",
+  "dependencies" : {
+    "phantomjs": "1.9.0-3",
+    "js_analysis": "0.0.7",
+    "html-minifier": "0.5.2",
+    "yuicompressor": "2.4.8",
+    "ejs": "0.8.4",
+    "mkdirp": "0.3.5",
+    "temp": "0.5.1",
+    "chokidar": "0.6.3",
+    "commander": "2.0.0",
+    "express": "3.3.1",
+    "http-proxy": "0.10.3"
+  },
+  "devDependencies": {
+    "karma": "0.8.7"
+  },
+  "keywords": [
+    "javascript",
+    "mvc",
+    "framework",
+    "router",
+    "web",
+    "large",
+    "fast",
+    "template",
+    "rich client"
+  ],
+  "preferGlobal": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deyunanhai/tupai.js.git"
+  }
+}

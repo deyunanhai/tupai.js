@@ -1,0 +1,7 @@
+{
+    "/root": "transit.RootViewController",
+    "/root/sub1": "transit.SubViewController",
+    "/root/sub2": "transit.SubViewController",
+    "/detail1": "transit.DetailViewController",
+    "/detail2": "transit.DetailViewController"
+}

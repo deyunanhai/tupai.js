@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<script src="../../../releases/web/tupai-last.js"></script>
+</head>
+<body>
+<div id="log"></div>
+<script type="text/javascript">
+(function() {
+
+    Package('test1')
+    .define('Parent', function(cp) { return Package.Class.extend({
+        print: function() {
+            console.log('print by parent');
+        }
+    });});
+
+    Package('test2')
+    .use('test1.Parent')
+    .define('Child', function(cp) { return cp.Parent.extend({
+        print: function() {
+            console.log('print by child');
+        },
+        printByParent: function() {
+            this.SUPER.print.apply(this, arguments);
+        }
+    });});
+
+
+    Package()
+    .use('test2.Child')
+    .run(function(cp) {
+        var c = new cp.Child();
+        c.print();
+        c.printByParent();
+    });
+
+})();
+</script>
+</body>
+</html>

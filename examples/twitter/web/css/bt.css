@@ -1,0 +1,83 @@
+/* ==========  button ========== */
+
+/* img btn */
+.mocha-bt-back {
+	display: block;
+	background: url(image/spr-button_2x-1.png) no-repeat -144px 0;
+	-webkit-background-size: 308px 232px;
+			background-size: 308px 232px;
+	width: 54px;
+	height: 36px;
+	text-indent: -9999px;
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+.mocha-bt-back.mocha-selected {
+	background-position: -198px 0;
+}
+
+.mocha-bt-close {
+	display: block;
+	background: url(image/spr-button_2x-1.png) no-repeat 0 0;
+	-webkit-background-size: 308px 232px;
+			background-size: 308px 232px;
+	width: 36px;
+	height: 36px;
+	text-indent: -9999px;
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+.mocha-bt-close.mocha-selected {
+	background-position: -36px 0;
+}
+
+.mocha-bt-star-on {
+	display: block;
+	width: 16px;
+	height: 15px;
+	margin-left: -4px;
+	padding: 10px 7px 10px 0;
+	text-indent: -9999px;
+}
+
+.mocha-bt-star-off {
+	display: block;
+	width: 16px;
+	height: 15px;
+	margin-left: -4px;
+	padding: 10px 7px 10px 0;
+	text-indent: -9999px;
+}
+.mocha-bt-morelink {
+	display: -webkit-box;
+	display:         box;
+	-webkit-box-pack: center;
+			box-pack: center;
+	-webkit-box-align: center;
+			box-align: center;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+	min-height: 40px;
+	margin: 0 8px;
+	padding: 6px 10px;
+	border-right: 1px solid #444;
+	border-left: 1px solid #444;
+	text-align: center;
+	font-size: 14px;
+	font-weight: bold;
+	color: #d9d9d9;
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(1.00, #424242), color-stop(0.96, #515151), color-stop(0.50, #626262), color-stop(0.04, #515151), color-stop(0.00, #424242));
+	background: -webkit-linear-gradient(top, #424242 0%, #515151 4%, #626262 50%, #515151 96%, #424242 100%);
+	background:         linear-gradient(to bottom, #424242 0%, #515151 4%, #626262 50%, #515151 96%, #424242 100%);
+	-webkit-text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4);
+			text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4);
+	-webkit-box-shadow: 0 2px 2px 1px rgba(0, 0, 0, 0.8);
+			box-shadow: 0 2px 2px 1px rgba(0, 0, 0, 0.8);
+}
+.mocha-bt-morelink-icon {
+	width: 12px;
+	height: 8px;
+	display: block;
+	background: url(image/spr-icon_2x-3.png) no-repeat -126px -36px;
+	-webkit-background-size: 190px 100px;
+			background-size: 190px 100px;
+	text-indent: -9999px;
+}

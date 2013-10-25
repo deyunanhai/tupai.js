@@ -1,0 +1,16 @@
+<%= query.callback%>({
+    results: [
+        {
+            text: "row 1"
+        },
+        {
+            text: "row 2"
+        },
+        {
+            text: "row 3"
+        },
+        {
+            text: "row 4"
+        }
+    ]
+});
