@@ -162,12 +162,9 @@ var configs = require(path.join(__dirname, 'configs'));
 exports.compileConfigSync = configs.compileConfigSync;
 
 exports.merge = function(action, options, execOptions) {
-    var scriptPath = path.join(baseDir, 'scripts/js_analysis/auto_merge.js');
     options = options || {};
     options['action'] = action;
-    var args = 'var options=' + JSON.stringify(options);
-    var pargs = ['-e', args, scriptPath];
-    execute(require('js_analysis').path, pargs, execOptions);
+    require('./auto_merge.js').run(options);
 };
 
 exports.compress = function(file, options, execOptions) {

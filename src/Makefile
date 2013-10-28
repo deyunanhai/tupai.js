@@ -33,4 +33,7 @@ $(JS_PUB_DIR):
 	$(MKDIR) -p $(JS_PUB_DIR)
 
 clear:
-	$(RM) -rf $(JS_PUB_DIR)
+	$(RM) $(JS_ORIGIN)
+	$(RM) $(JS_ORIGIN_WITH_VERSION)
+	$(RM) $(JS_PRODUCTION)
+	$(RM) $(JS_PRODUCTION_WITH_VERSION)
