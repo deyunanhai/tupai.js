@@ -89,7 +89,9 @@ program
                 o[name] = options[name];
             }
         });
-        tupai.merge(name, o);
+        tupai.merge(name, o, function(code) {
+            process.exit(code);
+        });
     });
 });
 

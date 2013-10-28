@@ -247,6 +247,423 @@
     global.Package.classProvider = classProvider;
 
 })(window);
+/**
+ * @class   tupai.events.Events
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * ### example
+ *     @example
+ *     Package('demo')
+ *     .use('tupai.events.Events')
+ *     .run(function(cp) {
+ *         var events = new cp.Events();
+ *         events.addEventListener('hoge', function(e) {
+ *             logOnBody('hoge is fired. message is ' + e.message);
+ *         });
+ *
+ *         events.fire('hoge', {message: 'hoge hoge'});
+ *     });
+ *
+ * ### fireDelegate example
+ *     @example
+ *     Package('demo')
+ *     .use('tupai.events.Events')
+ *     .define('Test', function(cp) { return Package.Class.extend({
+ *         didReciveMessage: function(e) {
+ *             logOnBody('hoge\'s didReciveMessage is fired. message is ' + e.message);
+ *         }
+ *     });}).run(function(cp) {
+ *         var test = new cp.Test();
+ *         var events = new cp.Events();
+ *         events.addEventListener('hoge', test);
+ *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
+ *     });
+ *
+ * ### Events base Model
+ *     @example
+ *     Package('demo')
+ *     .use('tupai.events.Events')
+ *     .define('Model', function(cp) { return cp.Events.extend({
+ *         initialize: function() {
+ *             this.SUPER.initialize.apply(this, arguments);
+ *             this._map = {};
+ *         },
+ *         on: function(name, cb) {
+ *             this.SUPER.addEventListener.apply(this, arguments);
+ *         },
+ *         set: function(obj) {
+ *             if(!obj) return;
+ *             for(var name in obj) {
+ *                 var oldV = this._map[name];
+ *                 var newV = obj[name];
+ *                 this._map[name] = newV;
+ *                 var type = (oldV?'change':'add');
+ *                 this.fire(type+':'+name, {
+ *                     name: name,
+ *                     oldValue: oldV,
+ *                     newValue: newV
+ *                 });
+ *             }
+ *         }
+ *     });}).run(function(cp) {
+ *         var test = new cp.Model();
+ *         test.on('change:color', function(args) {
+ *             logOnBody(args.name + ' is changed. ' + args.oldValue + ' -> ' + args.newValue);
+ *         });
+ *         test.on('add:color', function(args) {
+ *             logOnBody(args.name + ' is added. ' + args.newValue);
+ *         });
+ *         test.set({
+ *             color: 'oldValue'
+ *         });
+ *         test.set({
+ *             color: 'newValue'
+ *         });
+ *     });
+ *
+ */
+Package('tupai.events')
+.define('Events', function(cp) { return Package.Class.extend({
+
+    /**
+     * initialize
+     *
+     */
+    initialize : function (args) {
+        this._events = {};
+    },
+
+    /**
+     * fire event
+     * @param {String} type
+     * @param {Object} [parameter]
+     *
+     */
+    fire: function(type, parameter) {
+        var chain = this._events[type];
+        if(chain) {
+            var e = parameter || {};
+            e.eventName = type;
+            e.stop = false;
+            for(var i=0,n=chain.length;i<n;i++) {
+                if(!chain[i]) continue;
+
+                chain[i](e);
+                if(e.stop) break;
+            }
+        }
+    },
+
+    /**
+     * fire event and execute delegate method
+     * @param {String} name event name
+     * @param {String} type delegate method name
+     * @param {Object} [parameter]
+     *
+     */
+    fireDelegate: function(name, type, parameter) {
+        var chain = this._events[name];
+        if(chain) {
+            var e = parameter || {};
+            e.targetName = name;
+            e.eventName = type;
+            e.stop = false;
+            for(var i=0,n=chain.length;i<n;i++) {
+                if(!chain[i]) continue;
+
+                if(chain[i][type]) {
+                    chain[i][type](e);
+                    if(e.stop) break;
+                }
+            }
+        }
+    },
+
+    /**
+     * add event listener
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    addEventListener: function(type, listener, first) {
+        var chain = this._events[type];
+        if(!chain) {
+            this._events[type] = chain = [];
+        } else {
+            if(chain.indexOf(listener) >= 0) return false;
+        }
+        if(first) chain.unshift(listener);
+        else chain.push(listener);
+        return true;
+    },
+
+    /**
+     * remove listener from events pool
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     *
+     */
+    removeEventListener: function(type, listener) {
+        var chain = this._events[type];
+        if(!chain) return;
+        var index;
+        if((index=chain.indexOf(listener)) < 0) return false;
+
+        delete chain[index];
+        return true;
+    },
+
+    /**
+     * remove all listeners
+     * @param {String} type eventType
+     *
+     */
+    removeAllEventListener: function(type) {
+        delete this._events[type];
+    },
+
+    /**
+     * clear all listeners
+     *
+     */
+    clear: function() {
+        this._events = {};
+    }
+});});
+/*
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @version 1.0
+ * */
+Package('tupai.util')
+.define('MemCache', function(cp) { return Package.Class.extend({
+    _limit: undefined,
+    _storage: undefined,
+    initialize: function(limit, overflowRemoveSize) {
+
+        this._limit = limit || 300;
+        this._overflowRemoveSize = overflowRemoveSize || (this._limit/10);
+        this._storage = [];
+    },
+    setDelegate: function(delegate) {
+        this._delegate = delegate;
+    },
+    _cacheGC: function(fromHead) {
+        var i,n;
+        var storage = this._storage;
+        var len = this._overflowRemoveSize;
+        // don't use array's slice function because this action will create a new instance of array use too memory.
+        if(fromHead) {
+            for(i=0;i<len;i++) {
+                storage.shift();
+            }
+        } else {
+            for(i=0;i<len;i++) {
+                storage.pop();
+            }
+        }
+        this._delegate && this._delegate.didMemCacheGC &&
+        this._delegate.didMemCacheGC(this);
+    },
+    push: function(data) {
+        if(this._storage.length >= this._limit) {
+            this._cacheGC(true);
+        }
+        this._storage.push(data);
+        return true;
+    },
+    unshift: function(data) {
+        if(this._storage.length >= this._limit) {
+            this._cacheGC(false);
+        }
+        this._storage.unshift(data);
+        return true;
+    },
+    clear: function() {
+        this._storage=[];
+    },
+    iterator: function(callback) {
+        var storage = this._storage;
+        for(var i=0, n=storage.length; i<n; i++) {
+            callback(storage[i]);
+        }
+    },
+    filter: function(callback) {
+        var storage = this._storage;
+        var new_storage = [];
+        for(var i=0, n=storage.length; i<n;i++) {
+            if(callback(storage[i], i)) new_storage.push(storage[i]);
+        }
+        this._storage = new_storage;
+    },
+    remove: function(index) {
+        var storage = this._storage;
+        var ret = storage.splice(index, 1);
+        if(!ret || ret.length < 1) return undefined;
+        return ret[0];
+    },
+    removeByElement: function(data) {
+        var index = this._storage.indexOf(data);
+        return this.remove(index);
+    },
+    concatFirst: function(arr) {
+
+        if(this._storage.length + arr.length > this._limit) {
+            this._cacheGC(false);
+        }
+        this._storage = arr.concat(this._storage);
+        return true;
+    },
+    concat: function(arr) {
+        if(this._storage.length + arr.length > this._limit) {
+            this._cacheGC(true);
+        }
+        // don't use array's concat function because this action will create a new instance of array use too memory.
+        var storage = this._storage;
+        for(var i=0,n=arr.length;i<n;i++) {
+            storage.push(arr[i]);
+        }
+        return true;
+    },
+    getStorage: function() {
+        return this._storage;
+    },
+    swapStorage: function(storage) {
+        this._storage = storage;
+    },
+    get: function(index) {
+        return this._storage[index];
+    },
+    size: function() {
+        return this._storage.length;
+    }
+});});
+/**
+ * @class   tupai.model.DataSet
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * this class instance is create by Cache(HashCache or QueueCache) class
+ * see {@link tupai.model.CacheManager}
+ *
+ */
+Package('tupai.model')
+.define('DataSet', function(cp) { return Package.Class.extend({
+
+    /**
+     * initialize
+     * @param {Object} cache cache object
+     * @param {Object} options
+     * @param {Function} [options.filter]
+     *
+     */
+    initialize: function(cache, args) {
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+    },
+
+    /**
+     * get cache by id or index
+     * @param {String} id id or index
+     *
+     */
+    get: function(id) {
+    },
+
+    /**
+     * get size of cache items
+     *
+     */
+    size: function() {
+    }
+});});
+/**
+ * @class   tupai.model.caches.HashCacheDataSet
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * this class instance is create by HashCache.
+ * see {@link tupai.model.caches.HashCache}
+ *
+ */
+Package('tupai.model.caches')
+.use('tupai.model.DataSet')
+.define('HashCacheDataSet', function(cp) { return cp.DataSet.extend({
+
+    /**
+     * initialize
+     * @param {Object} cache cache object
+     * @param {Number} size cache size
+     * @param {Object} options
+     * @param {Function} [options.filter]
+     *
+     */
+    initialize: function(cache, size, args) {
+
+        this.SUPER.initialize.apply(this, arguments);
+        if(!cache) throw new Error('missing required parameter. cache');
+
+        this._cache = cache;
+        this._size = size;
+        if(args && args.filter) {
+            var newCache = {};
+            var limit = args.limit;
+            var count=0;
+            var filter = args.filter;
+            for(var name in cache) {
+                if(filter(cache[name], name)) {
+                    newCache[name] = cache[name];
+                    count++;
+                    if(limit && (count) >= limit) {
+                        break;
+                    }
+                }
+            }
+            this._cache = newCache;
+            this._size = count;
+        }
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        var storage = this._cache;
+        for(var name in storage) {
+            callback(storage[name], name);
+        }
+    },
+
+    /**
+     * get cache by id or index
+     * @param {String} id id or index
+     *
+     */
+    get: function(id) {
+        var storage = this._cache;
+        return storage[id];
+    },
+
+    /**
+     * get size of cache items
+     *
+     */
+    size: function() {
+        return this._size;
+    }
+});});
 /*
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @version 1.0
@@ -336,64 +753,529 @@ Package('tupai.util')
 /*
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @version 1.0
- * not complete
  * */
-Package('tupai.animation')
-.use('tupai.util.HashUtil')
-.define('Transition', function(cp) { return Package.Class.extend({
-    initialize : function (options) {
-        this._options = options;
-    },
-    getTransformation: function() {
-        return {
-            alpha: {
-            },
-            matrix: {
+Package('tupai.util')
+.define('HttpUtil', function(cp) {
+
+    function getQueryStringByUrl(url, key, default_) {
+        if (default_==null) default_='';
+        key = key.replace(/[\[]/,'\\\[').replace(/[\]]/,'\\\]');
+        var regex = new RegExp('[\\?&]'+key+'=([^&#]*)');
+        var qs = regex.exec(url);
+        if(qs == null)
+            return default_;
+        else
+            return qs[1];
+    }
+    function getUrlWithoutQueryString(url) {
+        return url.split('?')[0];
+    }
+    function getQueryString(key, default_) {
+        return getQueryStringByUrl(window.location.href, key, default_);
+    }
+    function compareUrlWithOutQueryString(srcUrl, tarUrl) {
+        return (getUrlWithoutQueryString(srcUrl) ==
+                getUrlWithoutQueryString(tarUrl));
+    }
+
+    function createRequester() {
+        var xhr;
+        try { xhr = new XMLHttpRequest(); } catch(e) {
+            try { xhr = new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {
+                try { xhr = new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {
+                    try { xhr = new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {
+                        try { xhr = new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {
+                            throw new Error( 'This browser does not support XMLHttpRequest.' );
+                        }
+                    }
+                }
             }
         }
+        return xhr;
+    }
+
+    function encode(obj) {
+        var set = [], key;
+
+        for ( key in obj ) {
+            set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
+        }
+
+        return set.join('&');
+    }
+
+    function encodeJson(obj) {
+
+        if( typeof obj === 'object' && obj !== null ) {
+            var d;
+            if (obj instanceof Array) {
+                d = [];
+                for(var i=0,n=obj.length;i<n;i++) {
+                    d.push(encodeJson(obj[i]));
+                }
+            } else {
+                d = {};
+                for ( var key in obj ) {
+                    d[key] = encodeJson(obj[key]);
+                }
+            }
+            return d;
+        } else {
+            return encodeURIComponent(obj);
+        }
+    }
+
+    function doAjax(url, success, error, options) {
+        var xhr = createRequester(),
+            options = options || {},
+            success = success || function() {},
+            error = error || function() {},
+            method = options.method || 'GET',
+            header = options.header || {},
+            ctype = options.ctype || (( method === 'POST' ) ? 'application/x-www-form-urlencoded' : ''),
+            data = options.data || '',
+            key;
+
+        xhr.onreadystatechange = function() {
+            if ( xhr.readyState === 4 ) {
+                if ( (xhr.status >= 200 && xhr.status < 300) || xhr.status == 0 ) {
+                    success(xhr.responseText, xhr);
+                } else {
+                    error(xhr);
+                }
+            }
+        };
+
+        if ( typeof data === 'object' ) {
+            if(options.type === 'json') {
+                data = JSON.stringify(encodeJson(data));
+            } else {
+                data = encode(data);
+            }
+        }
+
+        //console.log(method + ' ' + url + ' -- ' + data);
+        xhr.open(method, url, true);
+
+        if ( ctype ) {
+            xhr.setRequestHeader('Content-Type', ctype);
+        }
+
+        for ( key in header ) {
+            xhr.setRequestHeader(key, header[key]);
+        }
+
+        //console.log(method + ' ' + url + ' -- ' + data);
+        xhr.send(data);
+
+        return xhr;
+    }
+
+    var loadFlg = false;
+    var ajaxQueue = [];
+    var onLoadFunc = function() {
+        setTimeout(function(){
+            loadFlg = true;
+            var item;
+            while((item=ajaxQueue.shift())) {
+                doAjax.apply(this, item.param);
+            }
+        },10);
+    }
+    if(window.addEventListener) {
+        window.addEventListener('load', onLoadFunc, false);
+    } else {
+        window.attachEvent('onload', onLoadFunc);
+    }
+
+    function doAfterLoad(param) {
+        if(!loadFlg) ajaxQueue.push({param: param});
+        else doAjax.apply(this, param);
+    }
+
+    return {
+        encode: encode,
+        ajax: function(url, success, error, options) {
+            doAfterLoad([url, success, error, options]);
+        }
+    };
+});
+/**
+ * @class   tupai.net.JsonpClient
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * execute request.
+ * see {@link tupai.model.ApiManager}
+ * */
+Package('tupai.net')
+.define('JsonpClient', function(cp) { return Package.Class.extend({
+
+    /**
+     * initialize
+     * @param {Object} config
+     * @param {Object} config.defaultRequestHeaders request headers
+     * @param {Boolean} [config.autoIndex=false] auto change callbackName
+     *
+     */
+    initialize : function (options) {
+
+        this._autoIndex = true;
+        if(options) {
+            if(options.hasOwnProperty('autoIndex')) {
+                this._autoIndex = options.autoIndex;
+            }
+        }
+        if(this._autoIndex) {
+            this._index = 0;
+        }
     },
-    startCSSAnimation: function(view, delegate) {
-
-        this.setupCSSAnimation(view);
-        var callback = function () { cleanupOnAnimationEnd(); };
-        this._element.addEventListener('webkitTransitionEnd',callback , false);
-        var timerId = setTimeout(cleanupOnAnimationEnd, this.getCleanupTimeOut());
-
+    _setupCallback: function(callbackName, request, responseDelegate) {
         var THIS = this;
-        function cleanupOnAnimationEnd (e) {
+        window[callbackName] = function(json) {
+            if(THIS._autoIndex) {
+                delete window[callbackName];
+            }
+            var response = {
+                header: {},
+                status: 200,
+                statusText: 'OK',
+                responseText: JSON.stringify(json),
+                response: json
+            }
+            responseDelegate &&
+            responseDelegate.didHttpRequestSuccess &&
+            responseDelegate.didHttpRequestSuccess(response, request);
+        };
+    },
+    _setupScriptTag: function(url) {
+        var s = document.createElement('script');
+        s.type = 'text/javascript';
+        s.async = true;
+        s.src=url;
+        document.getElementsByTagName('head')[0].appendChild(s);
+    },
 
-            clearTimeout(timerId);
-            view._element.removeEventListener('webkitTransitionEnd', callback, false);
+    /**
+     * execute request
+     * @param {tupai.net.HttpRequest} request
+     * @param {Object} [responseDelegate]
+     * @param {Function} [responseDelegate.didHttpRequestSuccess] parameters: response, request
+     * @param {Function} [responseDelegate.didHttpRequestError] parameters: response, request
+     *
+     */
+    execute: function(request, responseDelegate) {
 
-            THIS.cleanupCSSAnimation(view);
-
-            delegate &&
-            delegate.didAnimationEnd &&
-            delegate.didAnimationEnd(THIS);
+        if(!request) {
+            throw new Error('missing required parameter.');
         }
-    },
-    cleanupCSSAnimation: function(view) {
-        view.css({
-            '-webkit-transition-duration' : null,
-            '-webkit-transition-property' : null,
-            '-webkit-transform' : null
-        });
-        if(view._children.length > 1) {
-            var prev = view.getChildAt(0);
-            prev.clearFromParent();
+
+        var callbackName = '__tupai_jsonpCallbck';
+        if(this._autoIndex) {
+            this._index ++;
+            callbackName += this._index;
         }
-    },
-    setupCSSAnimation: function(view) {
-        view.css({
-            '-webkit-transition-property' : '-webkit-transform',
-            '-webkit-transition-duration':  300,
-            '-webkit-transform' : 'translate3d(' + (direction === 'right2left' ? (-1 * window.innerWidth) + 'px': window.innerWidth + 'px') + ', 0, 0)' // translate3d width % does not work in android (at least with xperia). i.e translated(-100%, 30, 30);
-        });
-    },
-    getCleanupTimeOut: function() {
-        return 500;
-    },
+        var url = request.getUrl();
+        var queryString = request.getQueryString();
+        if(url.indexOf('?') > 0) url += '&';
+        else url += '?';
+        url += 'callback=' + callbackName;
+        if(queryString) {
+            url += '&' + queryString;
+        }
+        this._setupCallback(callbackName, request, responseDelegate);
+        //setTimeout(this._setupScriptTag, 10, url);
+        this._setupScriptTag(url);
+    }
 });});
+/**
+ * @class   tupai.net.HttpRequest
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ * see {@link tupai.model.ApiManager}
+ *
+ */
+Package('tupai.net')
+.use('tupai.util.HashUtil')
+.define('HttpRequest', function(cp) { return Package.Class.extend({
+
+    /**
+     * initialize
+     * @param {Object} config
+     * @param {String} config.url request url
+     * @param {Object} [config.headers] http request headers
+     * @param {Object} [config.type='json'] http request type
+     * @param {Object} [config.method='GET'] http request method
+     * @param {Object} [config.parameters] request parameters
+     * @param {Object} [config.queryParameters] request queryParameters
+     * @param {Object} [config.formDatas] request formDatas
+     * @param {Object} [config.attributes] request custom attributes
+     *
+     *
+     */
+    initialize: function(config) {
+
+        cp.HashUtil.require(config, ['url']);
+        this._url = config.url;
+        this._headers = config.headers || {};
+        this._type = config.type || 'json';
+        this._method = config.method;
+        this._attributes = config.attributes;
+        this._noFormData = !!(!this._method || this._method.match(/get/i));
+        this._parameters = config.parameters;
+
+        this._queryParameters = config.queryParameters;
+        this._formData = config.formData;
+    },
+
+    /**
+     * add some params to request
+     * @param {Object} params
+     * @param {Object} [params.headers] http request headers
+     * @param {Object} [params.parameters] request parameters
+     * @param {Object} [params.queryParameters] request queryParameters
+     * @param {Object} [params.formDatas] request formDatas
+     * @param {Object} [params.attributes] request custom attributes
+     *
+     */
+    addAll: function(params) {
+        this.addParameters(params.parameters);
+        this.addQueryParameters(params.queryParameters);
+        this.addFormDatas(params.formDatas);
+        this.addAttributes(params.attributes);
+        this.addHeaders(params.headers);
+    },
+
+    /**
+     * add some headers to request
+     * @param {Object} headers http request headers
+     *
+     */
+    addHeaders: function(headers) {
+        this._headers = cp.HashUtil.merge(this._headers, headers);
+    },
+
+    /**
+     * add some custom attributes to request
+     * @param {Object} attributes http request custom attributes
+     *
+     */
+    addAttributes: function(attributes) {
+        this._attributes = cp.HashUtil.merge(this._attributes, attributes);
+    },
+
+    /**
+     * add some parameters to request
+     * @param {Object} parameters http request parameters
+     *
+     * those parameters will add to formDatas when method is POST,
+     * add to queryParameters otherwise.
+     *
+     */
+    addParameters: function(parameters) {
+        this._parameters = cp.HashUtil.merge(this._parameters, parameters);
+    },
+
+    /**
+     * add some query parameters to request
+     * @param {Object} parameters http request query parameters
+     *
+     */
+    addQueryParameters: function(parameters) {
+        this._queryParameters = cp.HashUtil.merge(this._queryParameters, parameters);
+    },
+
+    /**
+     * add some form datas to request
+     * @param {Object} parameters http request form data
+     *
+     * this will ignore if method isn't POST
+     *
+     */
+    addFormDatas: function(parameters) {
+        this._formData = cp.HashUtil.merge(this._formData, parameters);
+    },
+
+    /**
+     * get url
+     * @return {String} url
+     *
+     */
+    getUrl: function() {
+        return this._url;
+    },
+
+    /**
+     * get type
+     * @return {String} type
+     *
+     */
+    getType: function() {
+        return this._type;
+    },
+
+    /**
+     * get http headers
+     * @return {Object} headers
+     *
+     */
+    getHeaders: function() {
+        return this._headers;
+    },
+    getQueryData: function() {
+        if(this._noFormData && this._parameters) {
+            return cp.HashUtil.merge(this._parameters, this._queryParameters);
+        } else {
+            return this._queryParameters;
+        }
+    },
+    getQueryString: function() {
+        var paramStr='';
+
+        var queryData = this.getQueryData();
+        if(queryData) {
+            for (var name in queryData) {
+                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
+            }
+        }
+
+        if(paramStr.length > 1) return paramStr.substring(0, paramStr.length-1);
+        else return null;
+    },
+
+    /**
+     * get custom attributes
+     * @return {Object} attributes
+     *
+     */
+    getAttributes: function() {
+        return this._attributes;
+    },
+
+    /**
+     * get custom attribute by name
+     * @param {String} name
+     * @return {Object} attribute
+     *
+     */
+    getAttribute: function(name) {
+        if(!this._attributes) return undefined;
+        else return this._attributes[name];
+    },
+
+    /**
+     * get parameters
+     * @return {Object} parameters
+     *
+     */
+    getParameters: function() {
+        return this._parameters;
+    },
+
+    /**
+     * get parameter by name
+     * @param {String} name
+     * @return {String} parameter
+     *
+     */
+    getParameter: function(name) {
+        if(!this._parameters) return undefined;
+        else return this._parameters[name];
+    },
+    getData: function() {
+
+        if(!this._noFormData && this._parameters) {
+            return cp.HashUtil.merge(this._parameters, this._formData);
+        } else {
+            return this._formData;
+        }
+    },
+    setRequestName: function(requestName) {
+        this._requestName = requestName;
+    },
+    getRequestName: function() {
+        return this._requestName;
+    },
+    getName: function() {
+        return this._name;
+    },
+    setName: function(name) {
+        this._name = name;
+    },
+    getName: function() {
+        return this._name;
+    },
+
+    /**
+     * get http method
+     * @return {String} http method
+     *
+     */
+    getMethod: function() {
+       return this._method;
+    }
+});});
+/*
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @version 1.0
+ * */
+Package('tupai.util')
+.define('CommonUtil', function(cp) {
+    var elm = document.createElement('div');
+    var getDataSet;
+    if (!elm.dataset) {
+        /*
+        var camelize = function(str) {
+            return str.replace(/-+(.)?/g, function(match, chr) {
+                return chr ? chr.toUpperCase() : '';
+            });
+        };
+        */
+        var toDash = function(str) {
+            return str.replace(/([A-Z])/g, function(m) { return '-'+m.toLowerCase(); });
+        };
+        getDataSet = function(element, name) {
+            var dataName = 'data-';
+            var attrs = element.attributes;
+            var attrName  = dataName + toDash(name);
+
+            var attr = attrs[attrName];
+            return attr && attr.value;
+        }
+    } else {
+        getDataSet = function(element, name) {
+            return element.dataset[name];
+        }
+    }
+
+    var haveClassList = !!elm.classList;
+
+    var bind = function() {
+        var args = Array.prototype.slice.call(arguments);
+        var func = args.shift(), object = args.shift();
+        return function() {
+            return func.apply(object, args.concat(Array.prototype.slice.call(arguments)));
+        };
+    };
+    var isValidUrl = function(url) {
+        if(!url) return false;
+        return !!url.match(/^(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
+    };
+    var isValidHttpUrl = function(url) {
+        if(!url) return false;
+        return !!url.match(/^(https?)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
+    };
+
+    return {
+        bind: bind,
+        isValidUrl: isValidUrl,
+        isValidHttpUrl: isValidHttpUrl,
+        haveClassList: haveClassList,
+        getDataSet: getDataSet
+    };
+});
 /**
  * @class   tupai.TransitManager
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -652,6 +1534,162 @@ Package('tupai')
     }
 });});
 /**
+ * @class   tupai.ui.TemplateEngine
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * Create element by template and bindingData
+ *
+ * you can make a plugin by override the methods
+ * also you can override the all of methods or some of it.
+ *
+ * ### plugin example
+ *     Package('plugin')
+ *     .use('tupai.ui.TemplateEngine')
+ *     .use('tupai.util.HashUtil')
+ *     .define('TemplateEnginePlugin', function(cp) {
+ *         var createElement = function(element, template, data) {
+ *             console.log('createElement');
+ *             return Super.createElement.apply(undefine, arguments);
+ *         };
+ *
+ *         var setValue = function(element, value) {
+ *             console.log('setValue');
+ *             return Super.setValue.apply(undefine, arguments);
+ *         };
+ *
+ *         var getValue = function(element) {
+ *             console.log('getValue');
+ *             return Super.getValue.apply(undefine, arguments);
+ *         };
+ *
+ *         var Super = cp.HashUtil.swap(cp.TemplateEngine, {
+ *             createElement: createElement,
+ *             setValue: setValue,
+ *             getValue: getValue
+ *         })
+ *     });
+ *
+ */
+Package('tupai.ui')
+.use('tupai.util.CommonUtil')
+.use('tupai.util.HashUtil')
+.define('TemplateEngine', function(cp) {
+
+    var bindToElement = function(tarElement, data) {
+        var elements = tarElement.querySelectorAll('*[data-ch-name]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var name = cp.CommonUtil.getDataSet(elements[i], 'chName');
+
+            var value = cp.HashUtil.getValueByName(name, data);
+            setValue(elm, value);
+        }
+        var name = cp.CommonUtil.getDataSet(tarElement, 'chName');
+        if(name) {
+            var value = cp.HashUtil.getValueByName(name, data);
+            setValue(tarElement, value);
+        }
+    };
+
+    /**
+     * create element
+     *
+     */
+    var createElement = function(element, template, data) {
+        if(element) {
+            bindToElement(element, data);
+            return element;
+        } else if(template) {
+            var root = document.createElement('div');
+            root.innerHTML = template;
+            var elem = root.children[0];
+            bindToElement(elem, data);
+            return elem;
+        } else {
+            return document.createElement('div');
+        }
+    };
+
+    /**
+     * set element value
+     *
+     */
+    var setValue = function(elm, value) {
+        if (elm.length) {
+            // select
+            var values = (value instanceof Array) ? value : [value];
+            Array.prototype.forEach.call(elm, function(elm) {
+                if (values.indexOf(elm.value) != -1) {
+                    elm.selected = true;
+                } else {
+                    elm.selected = false;
+                }
+            });
+        } else if (elm.value !== undefined) {
+            // input system
+            if (/radio|checkbox/.test(elm.type)) {
+                elm.checked = value;
+            }
+            else {
+                elm.value = value;
+            }
+        } else if(elm.src !== undefined) {
+            elm.src = value;
+        } else {
+            // other
+            if(value === undefined) {
+                elm.innerHTML = '';
+            } else {
+                elm.innerHTML = value;
+            }
+        }
+    };
+
+    /**
+     * get element value
+     *
+     */
+    var getValue = function(elm) {
+        if(!elm) return null;
+
+        if (elm.length) {
+            if(elm.getAttribute('multiple')) {
+                var ret=[];
+                Array.prototype.forEach.call(elm, function(elm) {
+                    if(elm.selected) {
+                        ret.push(elm.value);
+                    }
+                });
+                return ret;
+            } else {
+                return elm.value;
+            }
+        } else if (elm.value !== undefined) {
+            // input system
+            if (/radio|checkbox/.test(elm.type)) {
+                return elm.checked;
+            }
+            else {
+                return elm.value;
+            }
+        } else if (elm.src !== undefined) {
+            return elm.src;
+        } else {
+            return elm.innerHTML;
+        }
+
+        return null;
+    };
+
+    return {
+        createElement: createElement,
+        setValue: setValue,
+        getValue: getValue
+    };
+});
+/**
  * @class   tupai.ui.ViewEvents
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -717,951 +1755,140 @@ Package('tupai.ui')
 /*
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @version 1.0
+ * not complete
  * */
-Package('tupai.util')
-.define('CommonUtil', function(cp) {
-    var elm = document.createElement('div');
-    var getDataSet;
-    if (!elm.dataset) {
-        /*
-        var camelize = function(str) {
-            return str.replace(/-+(.)?/g, function(match, chr) {
-                return chr ? chr.toUpperCase() : '';
-            });
-        };
-        */
-        var toDash = function(str) {
-            return str.replace(/([A-Z])/g, function(m) { return '-'+m.toLowerCase(); });
-        };
-        getDataSet = function(element, name) {
-            var dataName = 'data-';
-            var attrs = element.attributes;
-            var attrName  = dataName + toDash(name);
-
-            var attr = attrs[attrName];
-            return attr && attr.value;
-        }
-    } else {
-        getDataSet = function(element, name) {
-            return element.dataset[name];
-        }
-    }
-
-    var haveClassList = !!elm.classList;
-
-    var bind = function() {
-        var args = Array.prototype.slice.call(arguments);
-        var func = args.shift(), object = args.shift();
-        return function() {
-            return func.apply(object, args.concat(Array.prototype.slice.call(arguments)));
-        };
-    };
-    var isValidUrl = function(url) {
-        if(!url) return false;
-        return !!url.match(/^(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
-    };
-    var isValidHttpUrl = function(url) {
-        if(!url) return false;
-        return !!url.match(/^(https?)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
-    };
-
-    return {
-        bind: bind,
-        isValidUrl: isValidUrl,
-        isValidHttpUrl: isValidHttpUrl,
-        haveClassList: haveClassList,
-        getDataSet: getDataSet
-    };
-});
-/**
- * @class   tupai.events.Events
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * ### example
- *     @example
- *     Package('demo')
- *     .use('tupai.events.Events')
- *     .run(function(cp) {
- *         var events = new cp.Events();
- *         events.addEventListener('hoge', function(e) {
- *             logOnBody('hoge is fired. message is ' + e.message);
- *         });
- *
- *         events.fire('hoge', {message: 'hoge hoge'});
- *     });
- *
- * ### fireDelegate example
- *     @example
- *     Package('demo')
- *     .use('tupai.events.Events')
- *     .define('Test', function(cp) { return Package.Class.extend({
- *         didReciveMessage: function(e) {
- *             logOnBody('hoge\'s didReciveMessage is fired. message is ' + e.message);
- *         }
- *     });}).run(function(cp) {
- *         var test = new cp.Test();
- *         var events = new cp.Events();
- *         events.addEventListener('hoge', test);
- *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
- *     });
- *
- * ### Events base Model
- *     @example
- *     Package('demo')
- *     .use('tupai.events.Events')
- *     .define('Model', function(cp) { return cp.Events.extend({
- *         initialize: function() {
- *             this.SUPER.initialize.apply(this, arguments);
- *             this._map = {};
- *         },
- *         on: function(name, cb) {
- *             this.SUPER.addEventListener.apply(this, arguments);
- *         },
- *         set: function(obj) {
- *             if(!obj) return;
- *             for(var name in obj) {
- *                 var oldV = this._map[name];
- *                 var newV = obj[name];
- *                 this._map[name] = newV;
- *                 var type = (oldV?'change':'add');
- *                 this.fire(type+':'+name, {
- *                     name: name,
- *                     oldValue: oldV,
- *                     newValue: newV
- *                 });
- *             }
- *         }
- *     });}).run(function(cp) {
- *         var test = new cp.Model();
- *         test.on('change:color', function(args) {
- *             logOnBody(args.name + ' is changed. ' + args.oldValue + ' -> ' + args.newValue);
- *         });
- *         test.on('add:color', function(args) {
- *             logOnBody(args.name + ' is added. ' + args.newValue);
- *         });
- *         test.set({
- *             color: 'oldValue'
- *         });
- *         test.set({
- *             color: 'newValue'
- *         });
- *     });
- *
- */
-Package('tupai.events')
-.define('Events', function(cp) { return Package.Class.extend({
-
-    /**
-     * initialize
-     *
-     */
-    initialize : function (args) {
-        this._events = {};
-    },
-
-    /**
-     * fire event
-     * @param {String} type
-     * @param {Object} [parameter]
-     *
-     */
-    fire: function(type, parameter) {
-        var chain = this._events[type];
-        if(chain) {
-            var e = parameter || {};
-            e.eventName = type;
-            e.stop = false;
-            for(var i=0,n=chain.length;i<n;i++) {
-                if(!chain[i]) continue;
-
-                chain[i](e);
-                if(e.stop) break;
-            }
-        }
-    },
-
-    /**
-     * fire event and execute delegate method
-     * @param {String} name event name
-     * @param {String} type delegate method name
-     * @param {Object} [parameter]
-     *
-     */
-    fireDelegate: function(name, type, parameter) {
-        var chain = this._events[name];
-        if(chain) {
-            var e = parameter || {};
-            e.targetName = name;
-            e.eventName = type;
-            e.stop = false;
-            for(var i=0,n=chain.length;i<n;i++) {
-                if(!chain[i]) continue;
-
-                if(chain[i][type]) {
-                    chain[i][type](e);
-                    if(e.stop) break;
-                }
-            }
-        }
-    },
-
-    /**
-     * add event listener
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-     *
-     */
-    addEventListener: function(type, listener, first) {
-        var chain = this._events[type];
-        if(!chain) {
-            this._events[type] = chain = [];
-        } else {
-            if(chain.indexOf(listener) >= 0) return false;
-        }
-        if(first) chain.unshift(listener);
-        else chain.push(listener);
-        return true;
-    },
-
-    /**
-     * remove listener from events pool
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     *
-     */
-    removeEventListener: function(type, listener) {
-        var chain = this._events[type];
-        if(!chain) return;
-        var index;
-        if((index=chain.indexOf(listener)) < 0) return false;
-
-        delete chain[index];
-        return true;
-    },
-
-    /**
-     * remove all listeners
-     * @param {String} type eventType
-     *
-     */
-    removeAllEventListener: function(type) {
-        delete this._events[type];
-    },
-
-    /**
-     * clear all listeners
-     *
-     */
-    clear: function() {
-        this._events = {};
-    }
-});});
-/**
- * @class   tupai.net.HttpRequest
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- * see {@link tupai.model.ApiManager}
- *
- */
-Package('tupai.net')
+Package('tupai.animation')
 .use('tupai.util.HashUtil')
-.define('HttpRequest', function(cp) { return Package.Class.extend({
-
-    /**
-     * initialize
-     * @param {Object} config
-     * @param {String} config.url request url
-     * @param {Object} [config.headers] http request headers
-     * @param {Object} [config.type='json'] http request type
-     * @param {Object} [config.method='GET'] http request method
-     * @param {Object} [config.parameters] request parameters
-     * @param {Object} [config.queryParameters] request queryParameters
-     * @param {Object} [config.formDatas] request formDatas
-     * @param {Object} [config.attributes] request custom attributes
-     *
-     *
-     */
-    initialize: function(config) {
-
-        cp.HashUtil.require(config, ['url']);
-        this._url = config.url;
-        this._headers = config.headers || {};
-        this._type = config.type || 'json';
-        this._method = config.method;
-        this._attributes = config.attributes;
-        this._noFormData = !!(!this._method || this._method.match(/get/i));
-        this._parameters = config.parameters;
-
-        this._queryParameters = config.queryParameters;
-        this._formData = config.formData;
-    },
-
-    /**
-     * add some params to request
-     * @param {Object} params
-     * @param {Object} [params.headers] http request headers
-     * @param {Object} [params.parameters] request parameters
-     * @param {Object} [params.queryParameters] request queryParameters
-     * @param {Object} [params.formDatas] request formDatas
-     * @param {Object} [params.attributes] request custom attributes
-     *
-     */
-    addAll: function(params) {
-        this.addParameters(params.parameters);
-        this.addQueryParameters(params.queryParameters);
-        this.addFormDatas(params.formDatas);
-        this.addAttributes(params.attributes);
-        this.addHeaders(params.headers);
-    },
-
-    /**
-     * add some headers to request
-     * @param {Object} headers http request headers
-     *
-     */
-    addHeaders: function(headers) {
-        this._headers = cp.HashUtil.merge(this._headers, headers);
-    },
-
-    /**
-     * add some custom attributes to request
-     * @param {Object} attributes http request custom attributes
-     *
-     */
-    addAttributes: function(attributes) {
-        this._attributes = cp.HashUtil.merge(this._attributes, attributes);
-    },
-
-    /**
-     * add some parameters to request
-     * @param {Object} parameters http request parameters
-     *
-     * those parameters will add to formDatas when method is POST,
-     * add to queryParameters otherwise.
-     *
-     */
-    addParameters: function(parameters) {
-        this._parameters = cp.HashUtil.merge(this._parameters, parameters);
-    },
-
-    /**
-     * add some query parameters to request
-     * @param {Object} parameters http request query parameters
-     *
-     */
-    addQueryParameters: function(parameters) {
-        this._queryParameters = cp.HashUtil.merge(this._queryParameters, parameters);
-    },
-
-    /**
-     * add some form datas to request
-     * @param {Object} parameters http request form data
-     *
-     * this will ignore if method isn't POST
-     *
-     */
-    addFormDatas: function(parameters) {
-        this._formData = cp.HashUtil.merge(this._formData, parameters);
-    },
-
-    /**
-     * get url
-     * @return {String} url
-     *
-     */
-    getUrl: function() {
-        return this._url;
-    },
-
-    /**
-     * get type
-     * @return {String} type
-     *
-     */
-    getType: function() {
-        return this._type;
-    },
-
-    /**
-     * get http headers
-     * @return {Object} headers
-     *
-     */
-    getHeaders: function() {
-        return this._headers;
-    },
-    getQueryData: function() {
-        if(this._noFormData && this._parameters) {
-            return cp.HashUtil.merge(this._parameters, this._queryParameters);
-        } else {
-            return this._queryParameters;
-        }
-    },
-    getQueryString: function() {
-        var paramStr='';
-
-        var queryData = this.getQueryData();
-        if(queryData) {
-            for (var name in queryData) {
-                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
-            }
-        }
-
-        if(paramStr.length > 1) return paramStr.substring(0, paramStr.length-1);
-        else return null;
-    },
-
-    /**
-     * get custom attributes
-     * @return {Object} attributes
-     *
-     */
-    getAttributes: function() {
-        return this._attributes;
-    },
-
-    /**
-     * get custom attribute by name
-     * @param {String} name
-     * @return {Object} attribute
-     *
-     */
-    getAttribute: function(name) {
-        if(!this._attributes) return undefined;
-        else return this._attributes[name];
-    },
-
-    /**
-     * get parameters
-     * @return {Object} parameters
-     *
-     */
-    getParameters: function() {
-        return this._parameters;
-    },
-
-    /**
-     * get parameter by name
-     * @param {String} name
-     * @return {String} parameter
-     *
-     */
-    getParameter: function(name) {
-        if(!this._parameters) return undefined;
-        else return this._parameters[name];
-    },
-    getData: function() {
-
-        if(!this._noFormData && this._parameters) {
-            return cp.HashUtil.merge(this._parameters, this._formData);
-        } else {
-            return this._formData;
-        }
-    },
-    setRequestName: function(requestName) {
-        this._requestName = requestName;
-    },
-    getRequestName: function() {
-        return this._requestName;
-    },
-    getName: function() {
-        return this._name;
-    },
-    setName: function(name) {
-        this._name = name;
-    },
-    getName: function() {
-        return this._name;
-    },
-
-    /**
-     * get http method
-     * @return {String} http method
-     *
-     */
-    getMethod: function() {
-       return this._method;
-    }
-});});
-/**
- * @class   tupai.net.JsonpClient
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * execute request.
- * see {@link tupai.model.ApiManager}
- * */
-Package('tupai.net')
-.define('JsonpClient', function(cp) { return Package.Class.extend({
-
-    /**
-     * initialize
-     * @param {Object} config
-     * @param {Object} config.defaultRequestHeaders request headers
-     * @param {Boolean} [config.autoIndex=false] auto change callbackName
-     *
-     */
+.define('TransitAnimation', function(cp) { return Package.Class.extend({
     initialize : function (options) {
-
-        this._autoIndex = true;
-        if(options) {
-            if(options.hasOwnProperty('autoIndex')) {
-                this._autoIndex = options.autoIndex;
-            }
-        }
-        if(this._autoIndex) {
-            this._index = 0;
-        }
+        this._options = options;
     },
-    _setupCallback: function(callbackName, request, responseDelegate) {
+    startCSSAnimation: function(container, tarView, delegate) {
+
+        if(this._animating) {
+            return;
+        }
+        this._animating = true;
+
+        var options = {};
+        this.setupCSSAnimation(container, tarView, options);
+        var callback = function () { cleanupOnAnimationEnd(); };
+        container._element.addEventListener('webkitTransitionEnd',callback , false);
+        var timerId = setTimeout(cleanupOnAnimationEnd, this.getCleanupTimeOut());
+
         var THIS = this;
-        window[callbackName] = function(json) {
-            if(THIS._autoIndex) {
-                delete window[callbackName];
-            }
-            var response = {
-                header: {},
-                status: 200,
-                statusText: 'OK',
-                responseText: JSON.stringify(json),
-                response: json
-            }
-            responseDelegate &&
-            responseDelegate.didHttpRequestSuccess &&
-            responseDelegate.didHttpRequestSuccess(response, request);
-        };
+        function cleanupOnAnimationEnd (e) {
+
+            clearTimeout(timerId);
+            container._element.removeEventListener('webkitTransitionEnd', callback, false);
+
+            THIS.cleanupCSSAnimation(container, tarView, options);
+
+            delegate &&
+            delegate.didAnimationEnd &&
+            delegate.didAnimationEnd(THIS);
+        }
     },
-    _setupScriptTag: function(url) {
-        var s = document.createElement('script');
-        s.type = 'text/javascript';
-        s.async = true;
-        s.src=url;
-        document.getElementsByTagName('head')[0].appendChild(s);
+    cleanupCSSAnimation: function(container, tarView, options) {
+
+        var currentStyle = options.currentStyle;
+        container.css({
+            '-webkit-transition-duration' : null,
+            '-webkit-transition-property' : null,
+            '-webkit-transform' : null
+        });
+        tarView.css({
+            'position' : currentStyle['position'] || null,
+            'overflow-y' : currentStyle['overflow-y'] || null,
+            'left' : currentStyle['left'],
+            'top' : currentStyle['top']
+        });
     },
+    setupCSSAnimation: function(container, tarView, options) {
 
-    /**
-     * execute request
-     * @param {tupai.net.HttpRequest} request
-     * @param {Object} [responseDelegate]
-     * @param {Function} [responseDelegate.didHttpRequestSuccess] parameters: response, request
-     * @param {Function} [responseDelegate.didHttpRequestError] parameters: response, request
-     *
-     */
-    execute: function(request, responseDelegate) {
+        options.currentStyle = {};
+        options.currentStyle['overflow-y'] = tarView.css('overflow-y');
+        options.currentStyle['top'] = tarView.css('top') || '0px';
+        options.currentStyle['left'] = tarView.css('left') || '0px';
+        options.currentStyle['position'] = tarView.css('position');
+        tarView.css({
+            position: 'absolute',
+            top: '0px',
+            left: direction === 'right2left' ? ( 1 * window.innerWidth) + 'px' : (-1 * window.innerWidth) + 'px',
+            'overflow-y': 'hidden'
+        });
 
-        if(!request) {
-            throw new Error('missing required parameter.');
-        }
+        container.css({
+            '-webkit-transition-property' : '-webkit-transform',
+            '-webkit-transition-duration':  300,
+            '-webkit-transform' : 'translate3d(' + (direction === 'right2left' ? (-1 * window.innerWidth) + 'px': window.innerWidth + 'px') + ', 0, 0)' // translate3d width % does not work in android (at least with xperia). i.e translated(-100%, 30, 30);
+        });
 
-        var callbackName = '__tupai_jsonpCallbck';
-        if(this._autoIndex) {
-            this._index ++;
-            callbackName += this._index;
-        }
-        var url = request.getUrl();
-        var queryString = request.getQueryString();
-        if(url.indexOf('?') > 0) url += '&';
-        else url += '?';
-        url += 'callback=' + callbackName;
-        if(queryString) {
-            url += '&' + queryString;
-        }
-        this._setupCallback(callbackName, request, responseDelegate);
-        //setTimeout(this._setupScriptTag, 10, url);
-        this._setupScriptTag(url);
-    }
+    },
+    getCleanupTimeOut: function() {
+        return 500;
+    },
 });});
 /*
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @version 1.0
+ * not complete
  * */
-Package('tupai.util')
-.define('HttpUtil', function(cp) {
-
-    function getQueryStringByUrl(url, key, default_) {
-        if (default_==null) default_='';
-        key = key.replace(/[\[]/,'\\\[').replace(/[\]]/,'\\\]');
-        var regex = new RegExp('[\\?&]'+key+'=([^&#]*)');
-        var qs = regex.exec(url);
-        if(qs == null)
-            return default_;
-        else
-            return qs[1];
-    }
-    function getUrlWithoutQueryString(url) {
-        return url.split('?')[0];
-    }
-    function getQueryString(key, default_) {
-        return getQueryStringByUrl(window.location.href, key, default_);
-    }
-    function compareUrlWithOutQueryString(srcUrl, tarUrl) {
-        return (getUrlWithoutQueryString(srcUrl) ==
-                getUrlWithoutQueryString(tarUrl));
-    }
-
-    function createRequester() {
-        var xhr;
-        try { xhr = new XMLHttpRequest(); } catch(e) {
-            try { xhr = new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {
-                try { xhr = new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {
-                    try { xhr = new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {
-                        try { xhr = new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {
-                            throw new Error( 'This browser does not support XMLHttpRequest.' );
-                        }
-                    }
-                }
+Package('tupai.animation')
+.use('tupai.util.HashUtil')
+.define('Transition', function(cp) { return Package.Class.extend({
+    initialize : function (options) {
+        this._options = options;
+    },
+    getTransformation: function() {
+        return {
+            alpha: {
+            },
+            matrix: {
             }
         }
-        return xhr;
-    }
-
-    function encode(obj) {
-        var set = [], key;
-
-        for ( key in obj ) {
-            set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
-        }
-
-        return set.join('&');
-    }
-
-    function encodeJson(obj) {
-
-        if( typeof obj === 'object' && obj !== null ) {
-            var d;
-            if (obj instanceof Array) {
-                d = [];
-                for(var i=0,n=obj.length;i<n;i++) {
-                    d.push(encodeJson(obj[i]));
-                }
-            } else {
-                d = {};
-                for ( var key in obj ) {
-                    d[key] = encodeJson(obj[key]);
-                }
-            }
-            return d;
-        } else {
-            return encodeURIComponent(obj);
-        }
-    }
-
-    function doAjax(url, success, error, options) {
-        var xhr = createRequester(),
-            options = options || {},
-            success = success || function() {},
-            error = error || function() {},
-            method = options.method || 'GET',
-            header = options.header || {},
-            ctype = options.ctype || (( method === 'POST' ) ? 'application/x-www-form-urlencoded' : ''),
-            data = options.data || '',
-            key;
-
-        xhr.onreadystatechange = function() {
-            if ( xhr.readyState === 4 ) {
-                if ( (xhr.status >= 200 && xhr.status < 300) || xhr.status == 0 ) {
-                    success(xhr.responseText, xhr);
-                } else {
-                    error(xhr);
-                }
-            }
-        };
-
-        if ( typeof data === 'object' ) {
-            if(options.type === 'json') {
-                data = JSON.stringify(encodeJson(data));
-            } else {
-                data = encode(data);
-            }
-        }
-
-        //console.log(method + ' ' + url + ' -- ' + data);
-        xhr.open(method, url, true);
-
-        if ( ctype ) {
-            xhr.setRequestHeader('Content-Type', ctype);
-        }
-
-        for ( key in header ) {
-            xhr.setRequestHeader(key, header[key]);
-        }
-
-        //console.log(method + ' ' + url + ' -- ' + data);
-        xhr.send(data);
-
-        return xhr;
-    }
-
-    var loadFlg = false;
-    var ajaxQueue = [];
-    var onLoadFunc = function() {
-        setTimeout(function(){
-            loadFlg = true;
-            var item;
-            while((item=ajaxQueue.shift())) {
-                doAjax.apply(this, item.param);
-            }
-        },10);
-    }
-    if(window.addEventListener) {
-        window.addEventListener('load', onLoadFunc, false);
-    } else {
-        window.attachEvent('onload', onLoadFunc);
-    }
-
-    function doAfterLoad(param) {
-        if(!loadFlg) ajaxQueue.push({param: param});
-        else doAjax.apply(this, param);
-    }
-
-    return {
-        encode: encode,
-        ajax: function(url, success, error, options) {
-            doAfterLoad([url, success, error, options]);
-        }
-    };
-});
-/**
- * @class   tupai.model.DataSet
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * this class instance is create by Cache(HashCache or QueueCache) class
- * see {@link tupai.model.CacheManager}
- *
- */
-Package('tupai.model')
-.define('DataSet', function(cp) { return Package.Class.extend({
-
-    /**
-     * initialize
-     * @param {Object} cache cache object
-     * @param {Object} options
-     * @param {Function} [options.filter]
-     *
-     */
-    initialize: function(cache, args) {
     },
+    startCSSAnimation: function(view, delegate) {
 
-    /**
-     * iterate cache item
-     * @param {Function} callback
-     *
-     */
-    iterator: function(callback) {
-    },
+        this.setupCSSAnimation(view);
+        var callback = function () { cleanupOnAnimationEnd(); };
+        this._element.addEventListener('webkitTransitionEnd',callback , false);
+        var timerId = setTimeout(cleanupOnAnimationEnd, this.getCleanupTimeOut());
 
-    /**
-     * get cache by id or index
-     * @param {String} id id or index
-     *
-     */
-    get: function(id) {
-    },
+        var THIS = this;
+        function cleanupOnAnimationEnd (e) {
 
-    /**
-     * get size of cache items
-     *
-     */
-    size: function() {
-    }
-});});
-/**
- * @class   tupai.model.caches.QueueCacheDataSet
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * this class instance is create by QueueCache
- * see {@link tupai.model.caches.QueueCache}
- *
- */
-Package('tupai.model.caches')
-.use('tupai.model.DataSet')
-.define('QueueCacheDataSet', function(cp) { return cp.DataSet.extend({
+            clearTimeout(timerId);
+            view._element.removeEventListener('webkitTransitionEnd', callback, false);
 
-    /**
-     * initialize
-     * @param {Object} cache cache object
-     * @param {Object} options
-     * @param {Function} [options.filter]
-     *
-     */
-    initialize: function(cache, args) {
+            THIS.cleanupCSSAnimation(view);
 
-        this.SUPER.initialize.apply(this, arguments);
-        if(!cache) throw new Error('missing required parameter. cache');
-
-        this._cache = cache;
-        if(args && args.filter) {
-            var newCache = [];
-            var limit = args.limit;
-            var count =0;
-            var filter = args.filter;
-            for(var i=0, n=cache.size(); i<n; i++) {
-                if(filter(cache.get(i), i)) {
-                    newCache.push(cache.get(i));
-                    count++;
-                    if(limit && (count) >= limit) {
-                        break;
-                    }
-                }
-            }
-            this._newCache = newCache;
+            delegate &&
+            delegate.didAnimationEnd &&
+            delegate.didAnimationEnd(THIS);
         }
     },
-
-    /**
-     * iterate cache item
-     * @param {Function} callback
-     *
-     */
-    iterator: function(callback) {
-        if(this._newCache) {
-            var storage = this._newCache;
-            for(var i=0, n=storage.length; i<n; i++) {
-                callback(storage[i]);
-            }
-        } else {
-            this._cache.iterator.apply(this._cache, arguments);
+    cleanupCSSAnimation: function(view) {
+        view.css({
+            '-webkit-transition-duration' : null,
+            '-webkit-transition-property' : null,
+            '-webkit-transform' : null
+        });
+        if(view._children.length > 1) {
+            var prev = view.getChildAt(0);
+            prev.clearFromParent();
         }
     },
-
-    /**
-     * get cache by id or index
-     * @param {String} id id or index
-     *
-     */
-    get: function(id) {
-        if(this._newCache) {
-            var storage = this._newCache;
-            return storage[id];
-        } else {
-            return this._cache.get.apply(this._cache, arguments);
-        }
+    setupCSSAnimation: function(view) {
+        view.css({
+            '-webkit-transition-property' : '-webkit-transform',
+            '-webkit-transition-duration':  300,
+            '-webkit-transform' : 'translate3d(' + (direction === 'right2left' ? (-1 * window.innerWidth) + 'px': window.innerWidth + 'px') + ', 0, 0)' // translate3d width % does not work in android (at least with xperia). i.e translated(-100%, 30, 30);
+        });
     },
-
-    /**
-     * get size of cache items
-     *
-     */
-    size: function() {
-        if(this._newCache) return this._newCache.length;
-        else return this._cache.size.apply(this._cache, arguments);
-    }
-});});
-/*
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @version 1.0
- * */
-Package('tupai.util')
-.define('MemCache', function(cp) { return Package.Class.extend({
-    _limit: undefined,
-    _storage: undefined,
-    initialize: function(limit, overflowRemoveSize) {
-
-        this._limit = limit || 300;
-        this._overflowRemoveSize = overflowRemoveSize || (this._limit/10);
-        this._storage = [];
+    getCleanupTimeOut: function() {
+        return 500;
     },
-    setDelegate: function(delegate) {
-        this._delegate = delegate;
-    },
-    _cacheGC: function(fromHead) {
-        var i,n;
-        var storage = this._storage;
-        var len = this._overflowRemoveSize;
-        // don't use array's slice function because this action will create a new instance of array use too memory.
-        if(fromHead) {
-            for(i=0;i<len;i++) {
-                storage.shift();
-            }
-        } else {
-            for(i=0;i<len;i++) {
-                storage.pop();
-            }
-        }
-        this._delegate && this._delegate.didMemCacheGC &&
-        this._delegate.didMemCacheGC(this);
-    },
-    push: function(data) {
-        if(this._storage.length >= this._limit) {
-            this._cacheGC(true);
-        }
-        this._storage.push(data);
-        return true;
-    },
-    unshift: function(data) {
-        if(this._storage.length >= this._limit) {
-            this._cacheGC(false);
-        }
-        this._storage.unshift(data);
-        return true;
-    },
-    clear: function() {
-        this._storage=[];
-    },
-    iterator: function(callback) {
-        var storage = this._storage;
-        for(var i=0, n=storage.length; i<n; i++) {
-            callback(storage[i]);
-        }
-    },
-    filter: function(callback) {
-        var storage = this._storage;
-        var new_storage = [];
-        for(var i=0, n=storage.length; i<n;i++) {
-            if(callback(storage[i], i)) new_storage.push(storage[i]);
-        }
-        this._storage = new_storage;
-    },
-    remove: function(index) {
-        var storage = this._storage;
-        var ret = storage.splice(index, 1);
-        if(!ret || ret.length < 1) return undefined;
-        return ret[0];
-    },
-    removeByElement: function(data) {
-        var index = this._storage.indexOf(data);
-        return this.remove(index);
-    },
-    concatFirst: function(arr) {
-
-        if(this._storage.length + arr.length > this._limit) {
-            this._cacheGC(false);
-        }
-        this._storage = arr.concat(this._storage);
-        return true;
-    },
-    concat: function(arr) {
-        if(this._storage.length + arr.length > this._limit) {
-            this._cacheGC(true);
-        }
-        // don't use array's concat function because this action will create a new instance of array use too memory.
-        var storage = this._storage;
-        for(var i=0,n=arr.length;i<n;i++) {
-            storage.push(arr[i]);
-        }
-        return true;
-    },
-    getStorage: function() {
-        return this._storage;
-    },
-    swapStorage: function(storage) {
-        this._storage = storage;
-    },
-    get: function(index) {
-        return this._storage[index];
-    },
-    size: function() {
-        return this._storage.length;
-    }
 });});
 /**
  * @class   tupai.ui.Templates
@@ -2184,239 +2411,355 @@ Package('tupai.util')
         }
     };
 });
-/*
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @version 1.0
- * not complete
- * */
-Package('tupai.animation')
-.use('tupai.util.HashUtil')
-.define('TransitAnimation', function(cp) { return Package.Class.extend({
-    initialize : function (options) {
-        this._options = options;
-    },
-    startCSSAnimation: function(container, tarView, delegate) {
-
-        if(this._animating) {
-            return;
-        }
-        this._animating = true;
-
-        var options = {};
-        this.setupCSSAnimation(container, tarView, options);
-        var callback = function () { cleanupOnAnimationEnd(); };
-        container._element.addEventListener('webkitTransitionEnd',callback , false);
-        var timerId = setTimeout(cleanupOnAnimationEnd, this.getCleanupTimeOut());
-
-        var THIS = this;
-        function cleanupOnAnimationEnd (e) {
-
-            clearTimeout(timerId);
-            container._element.removeEventListener('webkitTransitionEnd', callback, false);
-
-            THIS.cleanupCSSAnimation(container, tarView, options);
-
-            delegate &&
-            delegate.didAnimationEnd &&
-            delegate.didAnimationEnd(THIS);
-        }
-    },
-    cleanupCSSAnimation: function(container, tarView, options) {
-
-        var currentStyle = options.currentStyle;
-        container.css({
-            '-webkit-transition-duration' : null,
-            '-webkit-transition-property' : null,
-            '-webkit-transform' : null
-        });
-        tarView.css({
-            'position' : currentStyle['position'] || null,
-            'overflow-y' : currentStyle['overflow-y'] || null,
-            'left' : currentStyle['left'],
-            'top' : currentStyle['top']
-        });
-    },
-    setupCSSAnimation: function(container, tarView, options) {
-
-        options.currentStyle = {};
-        options.currentStyle['overflow-y'] = tarView.css('overflow-y');
-        options.currentStyle['top'] = tarView.css('top') || '0px';
-        options.currentStyle['left'] = tarView.css('left') || '0px';
-        options.currentStyle['position'] = tarView.css('position');
-        tarView.css({
-            position: 'absolute',
-            top: '0px',
-            left: direction === 'right2left' ? ( 1 * window.innerWidth) + 'px' : (-1 * window.innerWidth) + 'px',
-            'overflow-y': 'hidden'
-        });
-
-        container.css({
-            '-webkit-transition-property' : '-webkit-transform',
-            '-webkit-transition-duration':  300,
-            '-webkit-transform' : 'translate3d(' + (direction === 'right2left' ? (-1 * window.innerWidth) + 'px': window.innerWidth + 'px') + ', 0, 0)' // translate3d width % does not work in android (at least with xperia). i.e translated(-100%, 30, 30);
-        });
-
-    },
-    getCleanupTimeOut: function() {
-        return 500;
-    },
-});});
 /**
- * @class   tupai.ui.TemplateEngine
+ * @class   tupai.model.caches.QueueCacheDataSet
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @since tupai.js 0.1
  *
- * Create element by template and bindingData
- *
- * you can make a plugin by override the methods
- * also you can override the all of methods or some of it.
- *
- * ### plugin example
- *     Package('plugin')
- *     .use('tupai.ui.TemplateEngine')
- *     .use('tupai.util.HashUtil')
- *     .define('TemplateEnginePlugin', function(cp) {
- *         var createElement = function(element, template, data) {
- *             console.log('createElement');
- *             return Super.createElement.apply(undefine, arguments);
- *         };
- *
- *         var setValue = function(element, value) {
- *             console.log('setValue');
- *             return Super.setValue.apply(undefine, arguments);
- *         };
- *
- *         var getValue = function(element) {
- *             console.log('getValue');
- *             return Super.getValue.apply(undefine, arguments);
- *         };
- *
- *         var Super = cp.HashUtil.swap(cp.TemplateEngine, {
- *             createElement: createElement,
- *             setValue: setValue,
- *             getValue: getValue
- *         })
- *     });
+ * this class instance is create by QueueCache
+ * see {@link tupai.model.caches.QueueCache}
  *
  */
-Package('tupai.ui')
-.use('tupai.util.CommonUtil')
-.use('tupai.util.HashUtil')
-.define('TemplateEngine', function(cp) {
-
-    var bindToElement = function(tarElement, data) {
-        var elements = tarElement.querySelectorAll('*[data-ch-name]');
-        for (var i=0,len=elements.length; i<len; ++i) {
-            var elm = elements[i];
-            var name = cp.CommonUtil.getDataSet(elements[i], 'chName');
-
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(elm, value);
-        }
-        var name = cp.CommonUtil.getDataSet(tarElement, 'chName');
-        if(name) {
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(tarElement, value);
-        }
-    };
+Package('tupai.model.caches')
+.use('tupai.model.DataSet')
+.define('QueueCacheDataSet', function(cp) { return cp.DataSet.extend({
 
     /**
-     * create element
+     * initialize
+     * @param {Object} cache cache object
+     * @param {Object} options
+     * @param {Function} [options.filter]
      *
      */
-    var createElement = function(element, template, data) {
-        if(element) {
-            bindToElement(element, data);
-            return element;
-        } else if(template) {
-            var root = document.createElement('div');
-            root.innerHTML = template;
-            var elem = root.children[0];
-            bindToElement(elem, data);
-            return elem;
-        } else {
-            return document.createElement('div');
-        }
-    };
+    initialize: function(cache, args) {
 
-    /**
-     * set element value
-     *
-     */
-    var setValue = function(elm, value) {
-        if (elm.length) {
-            // select
-            var values = (value instanceof Array) ? value : [value];
-            Array.prototype.forEach.call(elm, function(elm) {
-                if (values.indexOf(elm.value) != -1) {
-                    elm.selected = true;
-                } else {
-                    elm.selected = false;
-                }
-            });
-        } else if (elm.value !== undefined) {
-            // input system
-            if (/radio|checkbox/.test(elm.type)) {
-                elm.checked = value;
-            }
-            else {
-                elm.value = value;
-            }
-        } else if(elm.src !== undefined) {
-            elm.src = value;
-        } else {
-            // other
-            if(value === undefined) {
-                elm.innerHTML = '';
-            } else {
-                elm.innerHTML = value;
-            }
-        }
-    };
+        this.SUPER.initialize.apply(this, arguments);
+        if(!cache) throw new Error('missing required parameter. cache');
 
-    /**
-     * get element value
-     *
-     */
-    var getValue = function(elm) {
-        if(!elm) return null;
-
-        if (elm.length) {
-            if(elm.getAttribute('multiple')) {
-                var ret=[];
-                Array.prototype.forEach.call(elm, function(elm) {
-                    if(elm.selected) {
-                        ret.push(elm.value);
+        this._cache = cache;
+        if(args && args.filter) {
+            var newCache = [];
+            var limit = args.limit;
+            var count =0;
+            var filter = args.filter;
+            for(var i=0, n=cache.size(); i<n; i++) {
+                if(filter(cache.get(i), i)) {
+                    newCache.push(cache.get(i));
+                    count++;
+                    if(limit && (count) >= limit) {
+                        break;
                     }
-                });
-                return ret;
-            } else {
-                return elm.value;
+                }
             }
-        } else if (elm.value !== undefined) {
-            // input system
-            if (/radio|checkbox/.test(elm.type)) {
-                return elm.checked;
+            this._newCache = newCache;
+        }
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        if(this._newCache) {
+            var storage = this._newCache;
+            for(var i=0, n=storage.length; i<n; i++) {
+                callback(storage[i]);
             }
-            else {
-                return elm.value;
-            }
-        } else if (elm.src !== undefined) {
-            return elm.src;
         } else {
-            return elm.innerHTML;
+            this._cache.iterator.apply(this._cache, arguments);
+        }
+    },
+
+    /**
+     * get cache by id or index
+     * @param {String} id id or index
+     *
+     */
+    get: function(id) {
+        if(this._newCache) {
+            var storage = this._newCache;
+            return storage[id];
+        } else {
+            return this._cache.get.apply(this._cache, arguments);
+        }
+    },
+
+    /**
+     * get size of cache items
+     *
+     */
+    size: function() {
+        if(this._newCache) return this._newCache.length;
+        else return this._cache.size.apply(this._cache, arguments);
+    }
+});});
+/**
+ * @class   tupai.model.caches.HashCache
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * cache data in hash by id
+ * see {@link tupai.model.CacheManager}
+ *
+ */
+Package('tupai.model.caches')
+.use('tupai.model.caches.HashCacheDataSet')
+.define('HashCache', function(cp) { return Package.Class.extend({
+    _storage: null,
+
+    /**
+     * initialize
+     * @param {String} name cache name
+     * @param {Object} options
+     * @param {Object} [options.idField='id'] data id field key
+     * @param {Object} [options.memCache] memory cache config
+     * @param {Number} [options.memCache.limit] memory cache limit
+     * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
+     * @param {Object} [options.localStorage] use localStorage
+     * @param {Object} [options.sesseionStorage] use sesseionStorage
+     * see {@link tupai.model.CacheManager#createCache}
+     *
+     */
+    initialize: function(name, options, delegate) {
+
+        options = options || {};
+
+        this._idField = options.idField || 'id';
+        this._unique = options.unique;
+
+        this._storage = {};
+        this._attributes = options.attributes;
+        this._size = 0;
+        if(options.memCache) {
+            var c = options.memCache;
+            this._limit = c.limit;
+            this._overflowRemoveSize = c.overflowRemoveSize;
+            if(!this._overflowRemoveSize) this._overflowRemoveSize = this._limit/10;
+        }
+        if(options.localStorage) {
+            this._nativeStorage = window.localStorage;
+        } else if(options.sessionStorage) {
+            this._nativeStorage = window.sessionStorage;
+        }
+        if(this._nativeStorage) {
+            this._nativeStorageKey = '__tupai_'+name;
+            var dataText = this._nativeStorage[this._nativeStorageKey];
+            if(dataText) {
+                this._storage = JSON.parse(dataText);
+            }
+            for(var name in this._storage) {
+                this._size ++;
+            }
         }
 
-        return null;
-    };
+        this._delegate = delegate;
+        this._name = name;
+    },
 
-    return {
-        createElement: createElement,
-        setValue: setValue,
-        getValue: getValue
-    };
-});
+    /**
+     * notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    notifyDataSetChanged : function(options) {
+        this._saveToNative();
+        this._delegate &&
+        this._delegate.didCacheChanged &&
+        this._delegate.didCacheChanged(this._name, this, options);
+    },
+
+    /**
+     * end edit the cache and notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    end: function(options) {
+        this.notifyDataSetChanged(options);
+    },
+
+    /**
+     * get custom attribute by name.
+     * @param {String} name attribute name
+     * @return {Object} attribute value
+     *
+     */
+    getAttribute: function(name) {
+        return this._attributes && this._attributes[name];
+    },
+
+    /**
+     * query cache and return {@link tupai.model.DataSet DataSet}
+     * @param {Object} args sess {@link tupai.model.DataSet}
+     * @return {tupai.model.DataSet} DataSet
+     *
+     */
+    query: function(args) {
+        var set = new cp.HashCacheDataSet(this._storage, this._size, args);
+        return set;
+    },
+    _saveToNative: function() {
+        if(this._nativeStorage) {
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage);
+        }
+    },
+    _cacheGC: function() {
+        var len = this._overflowRemoveSize || 100;
+        for(var i=0;i<len;i++) {
+            L1: while(1) {
+                for(var name in this._storage) {
+                    if(parseInt(Math.random()*3) == 0) {
+                        delete this._storage[name];
+                        this._size--;
+                        break L1;
+                    }
+                }
+            }
+        }
+        this._saveToNative();
+        this._delegate &&
+        this._delegate.didCacheGC &&
+        this._delegate.didCacheGC(this._name, this);
+    },
+
+    /**
+     * get cache name
+     * @return {String} name
+     *
+     */
+    getName: function() {
+        return this._name;
+    },
+
+    getId: function(data) {
+        return data[this._idField];
+    },
+    _push: function(data) {
+        var id = this.getId(data);
+        if(id == undefined) throw new Error('can\'t get ' + this._idField + ' from data.');
+        if(!this._storage.hasOwnProperty(id)) {
+            if(this._limit && this._size >= this._limit) {
+                this._cacheGC();
+            }
+            this._size++;
+        } else if (this._unique) throw new Error('duplicate key. ' + id);
+
+        this._storage[id] = data;
+    },
+
+    /**
+     * push data to cache. the method will not notify cache changed.
+     * you need to call end function to end edit and notify cache changed.
+     * @param {Object} data
+     *
+     */
+    push: function(data) {
+        if(data instanceof Array) {
+            for(var i=0, n=data.length; i<n; i++) {
+                this._push(data[i]);
+            }
+        } else {
+            this._push(data);
+        }
+    },
+
+    /**
+     * set cache filter
+     * @param {Function} callback
+     * @param {Boolean} [noNotify=false] set this parameter to true will not notify cache changed.
+     *
+     */
+    filter: function(callback, noNotify) {
+        var changed = false;
+        var name;
+        for(name in this._storage) {
+            if(!callback(this._storage[name], name)) {
+                changed = true;
+                delete this._storage[name];
+                this._size--;
+            }
+        }
+        if(!noNotify && changed) {
+            this.notifyDataSetChanged({action: 'filter'});
+        }
+    },
+
+    /**
+     * push data to top of cache
+     * @param {Object} data
+     *
+     */
+    unshift: function(data) {
+        this.push(data);
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        for(var name in this._storage) {
+            callback(this._storage[name], name);
+        }
+    },
+
+    /**
+     * remove element by id
+     * @param {Object} id
+     *
+     */
+    remove: function(id) {
+        var d = this._storage[id];
+        if(this._storage.hasOwnProperty(id)) {
+            delete this._storage[id];
+            this._size--;
+        }
+        return d;
+    },
+
+    /**
+     * remove element
+     * @param {Object} element
+     *
+     */
+    removeByElement: function(data) {
+        if(!data) return undefined;
+        var id = this.getId(data);
+        if(this._storage[id] === data) {
+            return this.remove(id);
+        }
+        return undefined;
+    },
+
+    /**
+     * clear cache
+     *
+     */
+    clear: function() {
+        this._storage = {};
+        this._size = 0;
+    },
+
+    /**
+     * get cache by id
+     * @param {String} id
+     *
+     */
+    get: function(id) {
+        return this._storage[id];
+    },
+
+    /**
+     * get size of cache items
+     *
+     */
+    size: function() {
+        return this._size;
+    }
+});});
 /**
  * @class   tupai.net.HttpClient
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -2578,303 +2921,6 @@ Package('tupai.net')
             throw new Error('missing required parameter.');
         }
         this._execute(request, responseDelegate);
-    }
-});});
-/**
- * @class   tupai.model.caches.HashCacheDataSet
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * this class instance is create by HashCache.
- * see {@link tupai.model.caches.HashCache}
- *
- */
-Package('tupai.model.caches')
-.use('tupai.model.DataSet')
-.define('HashCacheDataSet', function(cp) { return cp.DataSet.extend({
-
-    /**
-     * initialize
-     * @param {Object} cache cache object
-     * @param {Number} size cache size
-     * @param {Object} options
-     * @param {Function} [options.filter]
-     *
-     */
-    initialize: function(cache, size, args) {
-
-        this.SUPER.initialize.apply(this, arguments);
-        if(!cache) throw new Error('missing required parameter. cache');
-
-        this._cache = cache;
-        this._size = size;
-        if(args && args.filter) {
-            var newCache = {};
-            var limit = args.limit;
-            var count=0;
-            var filter = args.filter;
-            for(var name in cache) {
-                if(filter(cache[name], name)) {
-                    newCache[name] = cache[name];
-                    count++;
-                    if(limit && (count) >= limit) {
-                        break;
-                    }
-                }
-            }
-            this._cache = newCache;
-            this._size = count;
-        }
-    },
-
-    /**
-     * iterate cache item
-     * @param {Function} callback
-     *
-     */
-    iterator: function(callback) {
-        var storage = this._cache;
-        for(var name in storage) {
-            callback(storage[name], name);
-        }
-    },
-
-    /**
-     * get cache by id or index
-     * @param {String} id id or index
-     *
-     */
-    get: function(id) {
-        var storage = this._cache;
-        return storage[id];
-    },
-
-    /**
-     * get size of cache items
-     *
-     */
-    size: function() {
-        return this._size;
-    }
-});});
-/*
- * TODO:
- * - uniq CacheEngine
- * - sorted CacheEngine
- * */
-
-/**
- * @class   tupai.model.caches.QueueCache
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * cache data in queue
- * see {@link tupai.model.CacheManager}
- *
- */
-Package('tupai.model.caches')
-.use('tupai.util.MemCache')
-.use('tupai.model.caches.QueueCacheDataSet')
-.define('QueueCache', function(cp) { return Package.Class.extend({
-
-    /**
-     * initialize
-     * @param {String} name cache name
-     * @param {Object} options
-     * @param {Object} [options.memCache] memory cache config
-     * @param {Number} [options.memCache.limit] memory cache limit
-     * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
-     * @param {Object} [options.localStorage] use localStorage
-     * @param {Object} [options.sesseionStorage] use sesseionStorage
-     * see {@link tupai.model.CacheManager#createCache}
-     *
-     */
-    initialize: function(name, options, delegate) {
-
-        options = options || {};
-
-        var limit, overflowRemoveSize;
-        if(options.memCache) {
-            var c = options.memCache;
-            limit = c.limit;
-            overflowRemoveSize = c.overflowRemoveSize;
-        }
-        this._storage = new cp.MemCache(limit, overflowRemoveSize);
-        this._storage.setDelegate(this);
-        this._attributes = options.attributes;
-
-        if(options.localStorage) {
-            this._nativeStorage = window.localStorage;
-        } else if(options.sessionStorage) {
-            this._nativeStorage = window.sessionStorage;
-        }
-        if(this._nativeStorage) {
-            this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
-            if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
-            }
-        }
-
-        this._delegate = delegate;
-        this._name = name;
-    },
-    didMemCacheGC: function() {
-        this._saveToNative();
-        this._delegate &&
-        this._delegate.didCacheGC &&
-        this._delegate.didCacheGC(this._name, this);
-    },
-
-    /**
-     * get cache name
-     * @return {String} name
-     *
-     */
-    getName: function() {
-        return this._name;
-    },
-
-    /**
-     * notify cache has been changed
-     * @param {Object} [options] custom options
-     *
-     */
-    notifyDataSetChanged : function(options) {
-        this._saveToNative();
-        this._delegate &&
-        this._delegate.didCacheChanged &&
-        this._delegate.didCacheChanged(this._name, this, options);
-    },
-    _saveToNative: function() {
-        if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
-        }
-    },
-
-    /**
-     * end edit the cache and notify cache has been changed
-     * @param {Object} [options] custom options
-     *
-     */
-    end: function(options) {
-        this.notifyDataSetChanged(options);
-    },
-
-    /**
-     * query cache and return {@link tupai.model.DataSet DataSet}
-     * @param {Object} args sess {@link tupai.model.DataSet}
-     * @return {tupai.model.DataSet} DataSet
-     *
-     */
-    query: function(args) {
-        var set = new cp.QueueCacheDataSet(this._storage, args);
-        return set;
-    },
-
-    /**
-     * get custom attribute by name.
-     * @param {String} name attribute name
-     * @return {Object} attribute value
-     *
-     */
-    getAttribute: function(name) {
-        return this._attributes && this._attributes[name];
-    },
-
-    /**
-     * push data to cache. the method will not notify cache changed.
-     * you need to call end function to end edit and notify cache changed.
-     * @param {Object} data
-     *
-     */
-    push: function(data) {
-        if(data instanceof Array) {
-            this._storage.concat(data);
-        } else {
-            this._storage.push(data);
-        }
-    },
-
-    /**
-     * push data to top of cache
-     * @param {Object} data
-     *
-     */
-    unshift: function(data) {
-        if(data instanceof Array) {
-            this._storage.concatFirst(data);
-        } else {
-            this._storage.unshift(data);
-        }
-    },
-
-    /**
-     * Creates a new array with all of the elements of this array for which the provided filtering function returns true.
-     * @param {Function} callback
-     * @param {Boolean} [noNotify=false] set this parameter to true will not notify cache changed.
-     *
-     */
-    filter: function(callback, noNotify) {
-        var oldSize = this.size();
-        this._storage.filter(callback);
-        if(!noNotify && this.size() != oldSize) {
-            this._delegate.didCacheChanged(this._name, this);
-        }
-    },
-
-    /**
-     * iterate cache item
-     * @param {Function} callback
-     *
-     */
-    iterator: function(callback) {
-        this._storage.iterator(callback);
-    },
-
-    /**
-     * remove element by index
-     * @param {Number} index
-     *
-     */
-    remove: function(index) {
-        return this._storage.remove(index);
-    },
-
-    /**
-     * remove element
-     * @param {Object} element
-     *
-     */
-    removeByElement: function(data) {
-        return this._storage.remove(data);
-    },
-
-    /**
-     * clear cache
-     *
-     */
-    clear: function() {
-        this._storage.clear();
-    },
-
-    /**
-     * get cache by index
-     * @param {Number} index
-     *
-     */
-    get: function(index) {
-        return this._storage.get(index);
-    },
-
-    /**
-     * get size of cache items
-     *
-     */
-    size: function() {
-        return this._storage.size();
     }
 });});
 /**
@@ -3668,6 +3714,427 @@ Package('tupai.ui')
 });
 
 /**
+ * @class   tupai.ui.TableView
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * An instance of TableView is a means for displaying hierarchical lists of information.
+ * You must define some delegate method in your ViewController
+ *
+ * ### delegate methods
+ * -  numberOfRows(tableView);
+ * -  cellForRowAtIndexPath(indexPath, tableView);
+ * -  cellForRowAtTop(tableView);
+ * -  cellForRowAtBottom(tableView);
+ *
+ * ### simple example
+ *     Package()
+ *     .use('tupai.ui.View')
+ *     .use('tupai.ui.TableView')
+ *     .use('tupai.ViewController')
+ *     .define('ViewEventsPlugin', function(cp) { return cp.ViewController.extend({
+ *         viewInit: function() {
+ *             this._data = ['red','blue','green'];
+ *             var view = new cp.TableView();
+ *             view.setTableViewDelegate(this);
+ *             this.setContentView(view);
+ *         },
+ *         numberOfRows: function() {
+ *             return this._data.length;
+ *         },
+ *         cellForRowAtTop: function() {
+ *             if(this._headerView == null) {
+ *                 this._headerView = new cp.View();
+ *                 this._headerView.setValue('header');
+ *             }
+ *             return this._headerView;
+ *         },
+ *         cellForRowAtBottom: function() {
+ *             if(this._bottomView == null) {
+ *                 this._bottomView = new cp.View();
+ *                 this._bottomView.setValue('footer');
+ *             }
+ *             return this._bottomView;
+ *         },
+ *         cellForRowAtIndexPath: function(indexPath, tableView) {
+ *             var row = indexPath.row;
+ *             var cell = tableView.dequeueReusableCell('demo_cell');
+ *             if(cell == null) {
+ *                 cell = new cp.View();
+ *             }
+ *             cell.setValue(this._data[row]);
+ *             return cell;
+ *         }
+ *     });});
+ *
+ */
+Package('tupai.ui')
+.use('tupai.ui.View')
+.define('TableView', function(cp) { return cp.View.extend({
+    _tableViewDelegate: undefined,
+
+    /**
+     * initialize
+     * @param {Object} [args]
+     * see {@link tupai.ui.View#initialize}
+     *
+     */
+    initialize : function (args) {
+
+        cp.View.prototype.initialize.apply(this, arguments);
+    },
+
+    /**
+     * set table view delegate
+     * @param {Object} delegate
+     *
+     * ### delegate methods
+     * -  numberOfRows(tableView);
+     * -  cellForRowAtIndexPath(indexPath, tableView);
+     * -  cellForRowAtTop(tableView);
+     * -  cellForRowAtBottom(tableView);
+     */
+    setTableViewDelegate: function(tableViewDelegate) {
+        this._tableViewDelegate = tableViewDelegate;
+    },
+
+    /**
+     * Returns a reusable table-view cell object located by its type
+     * @param {String} type
+     *
+     */
+    dequeueReusableCell: function(type) {
+        return null;
+    },
+
+    /**
+     * set filter to tableview to control show and hide the cell
+     * @param {Function} callback
+     *
+     */
+    setFilter: function(callback) {
+        this.iterateChildren(function(cell) {
+
+            if(callback(cell)) {
+                cell.show();
+            } else {
+                cell.hide();
+            }
+        });
+    },
+
+    /**
+     * load the top new data
+     *
+     */
+    loadTopNewData: function() {
+        return this.reloadRowsFrom();
+    },
+
+    /**
+     * load the bottom new data
+     *
+     */
+    loadBottomNewData: function(length) {
+        var from=this._numberOfRows || 0;
+        if(length !== undefined) {
+            var newLength = this._tableViewDelegate.numberOfRows(this);
+            from -= (length - (newLength - from));
+        }
+        return this.reloadRowsFrom(from);
+    },
+    _addCell: function(cell) {
+        this.addSubView(cell);
+    },
+
+    /**
+     * reload this tableView
+     *
+     */
+    reloadData: function() {
+        return this.reloadRowsFrom(0);
+    },
+
+    /**
+     * reload this tableView
+     * @param {Number} [from]
+     *
+     */
+    reloadRowsFrom: function(from) {
+
+        if(from == undefined || from < 0) from = 0;
+
+        var domFrom = from;
+        if(this._hasHeader) domFrom ++;
+        if(!this.clearChildrenByRange(domFrom)) return;
+
+        if(this._tableViewDelegate.cellForRowAtTop) {
+            cell = this._tableViewDelegate.cellForRowAtTop(this);
+            if(cell) {
+                if(!this._hasHeader) {
+                    this.addSubView(cell);
+                }
+                this._hasHeader = true;
+            } else {
+                if(this._hasHeader) {
+                    this.removeChildAt(0);
+                }
+                this._hasHeader = false;
+            }
+        }
+
+        var numberOfRows = this._tableViewDelegate.numberOfRows(this);
+        this._numberOfRows = numberOfRows;
+        if(from < numberOfRows) {
+            for(var i=from;i<numberOfRows;i++) {
+                var cell = this._tableViewDelegate.cellForRowAtIndexPath({row: i}, this);
+                if(!cell) throw new Error('you need return view by row ' + i);
+                this._addCell(cell);
+            }
+        }
+
+        if(this._tableViewDelegate.cellForRowAtBottom) {
+            cell = this._tableViewDelegate.cellForRowAtBottom(this);
+            cell && this.addSubView(cell);
+        }
+        this.render();
+    }
+});});
+/*
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @version 1.0
+ * @deprecated
+ * */
+Package('tupai.ui')
+.use('tupai.ui.View')
+.define('TemplateView', function(cp) { return cp.View.extend({
+    initialize : function (args) {
+        console.error('TemplateView is Deprecated, use View instead');
+        cp.View.prototype.initialize.apply(this, arguments);
+    },
+});});
+/*
+ * TODO:
+ * - uniq CacheEngine
+ * - sorted CacheEngine
+ * */
+
+/**
+ * @class   tupai.model.caches.QueueCache
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * cache data in queue
+ * see {@link tupai.model.CacheManager}
+ *
+ */
+Package('tupai.model.caches')
+.use('tupai.util.MemCache')
+.use('tupai.model.caches.QueueCacheDataSet')
+.define('QueueCache', function(cp) { return Package.Class.extend({
+
+    /**
+     * initialize
+     * @param {String} name cache name
+     * @param {Object} options
+     * @param {Object} [options.memCache] memory cache config
+     * @param {Number} [options.memCache.limit] memory cache limit
+     * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
+     * @param {Object} [options.localStorage] use localStorage
+     * @param {Object} [options.sesseionStorage] use sesseionStorage
+     * see {@link tupai.model.CacheManager#createCache}
+     *
+     */
+    initialize: function(name, options, delegate) {
+
+        options = options || {};
+
+        var limit, overflowRemoveSize;
+        if(options.memCache) {
+            var c = options.memCache;
+            limit = c.limit;
+            overflowRemoveSize = c.overflowRemoveSize;
+        }
+        this._storage = new cp.MemCache(limit, overflowRemoveSize);
+        this._storage.setDelegate(this);
+        this._attributes = options.attributes;
+
+        if(options.localStorage) {
+            this._nativeStorage = window.localStorage;
+        } else if(options.sessionStorage) {
+            this._nativeStorage = window.sessionStorage;
+        }
+        if(this._nativeStorage) {
+            this._nativeStorageKey = '__tupai_'+name;
+            var dataText = this._nativeStorage[this._nativeStorageKey];
+            if(dataText) {
+                this._storage.swapStorage(JSON.parse(dataText));
+            }
+        }
+
+        this._delegate = delegate;
+        this._name = name;
+    },
+    didMemCacheGC: function() {
+        this._saveToNative();
+        this._delegate &&
+        this._delegate.didCacheGC &&
+        this._delegate.didCacheGC(this._name, this);
+    },
+
+    /**
+     * get cache name
+     * @return {String} name
+     *
+     */
+    getName: function() {
+        return this._name;
+    },
+
+    /**
+     * notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    notifyDataSetChanged : function(options) {
+        this._saveToNative();
+        this._delegate &&
+        this._delegate.didCacheChanged &&
+        this._delegate.didCacheChanged(this._name, this, options);
+    },
+    _saveToNative: function() {
+        if(this._nativeStorage) {
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+        }
+    },
+
+    /**
+     * end edit the cache and notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    end: function(options) {
+        this.notifyDataSetChanged(options);
+    },
+
+    /**
+     * query cache and return {@link tupai.model.DataSet DataSet}
+     * @param {Object} args sess {@link tupai.model.DataSet}
+     * @return {tupai.model.DataSet} DataSet
+     *
+     */
+    query: function(args) {
+        var set = new cp.QueueCacheDataSet(this._storage, args);
+        return set;
+    },
+
+    /**
+     * get custom attribute by name.
+     * @param {String} name attribute name
+     * @return {Object} attribute value
+     *
+     */
+    getAttribute: function(name) {
+        return this._attributes && this._attributes[name];
+    },
+
+    /**
+     * push data to cache. the method will not notify cache changed.
+     * you need to call end function to end edit and notify cache changed.
+     * @param {Object} data
+     *
+     */
+    push: function(data) {
+        if(data instanceof Array) {
+            this._storage.concat(data);
+        } else {
+            this._storage.push(data);
+        }
+    },
+
+    /**
+     * push data to top of cache
+     * @param {Object} data
+     *
+     */
+    unshift: function(data) {
+        if(data instanceof Array) {
+            this._storage.concatFirst(data);
+        } else {
+            this._storage.unshift(data);
+        }
+    },
+
+    /**
+     * Creates a new array with all of the elements of this array for which the provided filtering function returns true.
+     * @param {Function} callback
+     * @param {Boolean} [noNotify=false] set this parameter to true will not notify cache changed.
+     *
+     */
+    filter: function(callback, noNotify) {
+        var oldSize = this.size();
+        this._storage.filter(callback);
+        if(!noNotify && this.size() != oldSize) {
+            this._delegate.didCacheChanged(this._name, this);
+        }
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        this._storage.iterator(callback);
+    },
+
+    /**
+     * remove element by index
+     * @param {Number} index
+     *
+     */
+    remove: function(index) {
+        return this._storage.remove(index);
+    },
+
+    /**
+     * remove element
+     * @param {Object} element
+     *
+     */
+    removeByElement: function(data) {
+        return this._storage.remove(data);
+    },
+
+    /**
+     * clear cache
+     *
+     */
+    clear: function() {
+        this._storage.clear();
+    },
+
+    /**
+     * get cache by index
+     * @param {Number} index
+     *
+     */
+    get: function(index) {
+        return this._storage.get(index);
+    },
+
+    /**
+     * get size of cache items
+     *
+     */
+    size: function() {
+        return this._storage.size();
+    }
+});});
+/**
  * @class   tupai.model.ApiManager
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -3987,473 +4454,6 @@ Package('tupai.model')
         };
         this._events.fireDelegate(name, methodName, e);
     }
-});});
-/**
- * @class   tupai.model.caches.HashCache
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * cache data in hash by id
- * see {@link tupai.model.CacheManager}
- *
- */
-Package('tupai.model.caches')
-.use('tupai.model.caches.HashCacheDataSet')
-.define('HashCache', function(cp) { return Package.Class.extend({
-    _storage: null,
-
-    /**
-     * initialize
-     * @param {String} name cache name
-     * @param {Object} options
-     * @param {Object} [options.idField='id'] data id field key
-     * @param {Object} [options.memCache] memory cache config
-     * @param {Number} [options.memCache.limit] memory cache limit
-     * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
-     * @param {Object} [options.localStorage] use localStorage
-     * @param {Object} [options.sesseionStorage] use sesseionStorage
-     * see {@link tupai.model.CacheManager#createCache}
-     *
-     */
-    initialize: function(name, options, delegate) {
-
-        options = options || {};
-
-        this._idField = options.idField || 'id';
-        this._unique = options.unique;
-
-        this._storage = {};
-        this._attributes = options.attributes;
-        this._size = 0;
-        if(options.memCache) {
-            var c = options.memCache;
-            this._limit = c.limit;
-            this._overflowRemoveSize = c.overflowRemoveSize;
-            if(!this._overflowRemoveSize) this._overflowRemoveSize = this._limit/10;
-        }
-        if(options.localStorage) {
-            this._nativeStorage = window.localStorage;
-        } else if(options.sessionStorage) {
-            this._nativeStorage = window.sessionStorage;
-        }
-        if(this._nativeStorage) {
-            this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
-            if(dataText) {
-                this._storage = JSON.parse(dataText);
-            }
-            for(var name in this._storage) {
-                this._size ++;
-            }
-        }
-
-        this._delegate = delegate;
-        this._name = name;
-    },
-
-    /**
-     * notify cache has been changed
-     * @param {Object} [options] custom options
-     *
-     */
-    notifyDataSetChanged : function(options) {
-        this._saveToNative();
-        this._delegate &&
-        this._delegate.didCacheChanged &&
-        this._delegate.didCacheChanged(this._name, this, options);
-    },
-
-    /**
-     * end edit the cache and notify cache has been changed
-     * @param {Object} [options] custom options
-     *
-     */
-    end: function(options) {
-        this.notifyDataSetChanged(options);
-    },
-
-    /**
-     * get custom attribute by name.
-     * @param {String} name attribute name
-     * @return {Object} attribute value
-     *
-     */
-    getAttribute: function(name) {
-        return this._attributes && this._attributes[name];
-    },
-
-    /**
-     * query cache and return {@link tupai.model.DataSet DataSet}
-     * @param {Object} args sess {@link tupai.model.DataSet}
-     * @return {tupai.model.DataSet} DataSet
-     *
-     */
-    query: function(args) {
-        var set = new cp.HashCacheDataSet(this._storage, this._size, args);
-        return set;
-    },
-    _saveToNative: function() {
-        if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage);
-        }
-    },
-    _cacheGC: function() {
-        var len = this._overflowRemoveSize || 100;
-        for(var i=0;i<len;i++) {
-            L1: while(1) {
-                for(var name in this._storage) {
-                    if(parseInt(Math.random()*3) == 0) {
-                        delete this._storage[name];
-                        this._size--;
-                        break L1;
-                    }
-                }
-            }
-        }
-        this._saveToNative();
-        this._delegate &&
-        this._delegate.didCacheGC &&
-        this._delegate.didCacheGC(this._name, this);
-    },
-
-    /**
-     * get cache name
-     * @return {String} name
-     *
-     */
-    getName: function() {
-        return this._name;
-    },
-
-    getId: function(data) {
-        return data[this._idField];
-    },
-    _push: function(data) {
-        var id = this.getId(data);
-        if(id == undefined) throw new Error('can\'t get ' + this._idField + ' from data.');
-        if(!this._storage.hasOwnProperty(id)) {
-            if(this._limit && this._size >= this._limit) {
-                this._cacheGC();
-            }
-            this._size++;
-        } else if (this._unique) throw new Error('duplicate key. ' + id);
-
-        this._storage[id] = data;
-    },
-
-    /**
-     * push data to cache. the method will not notify cache changed.
-     * you need to call end function to end edit and notify cache changed.
-     * @param {Object} data
-     *
-     */
-    push: function(data) {
-        if(data instanceof Array) {
-            for(var i=0, n=data.length; i<n; i++) {
-                this._push(data[i]);
-            }
-        } else {
-            this._push(data);
-        }
-    },
-
-    /**
-     * set cache filter
-     * @param {Function} callback
-     * @param {Boolean} [noNotify=false] set this parameter to true will not notify cache changed.
-     *
-     */
-    filter: function(callback, noNotify) {
-        var changed = false;
-        var name;
-        for(name in this._storage) {
-            if(!callback(this._storage[name], name)) {
-                changed = true;
-                delete this._storage[name];
-                this._size--;
-            }
-        }
-        if(!noNotify && changed) {
-            this.notifyDataSetChanged({action: 'filter'});
-        }
-    },
-
-    /**
-     * push data to top of cache
-     * @param {Object} data
-     *
-     */
-    unshift: function(data) {
-        this.push(data);
-    },
-
-    /**
-     * iterate cache item
-     * @param {Function} callback
-     *
-     */
-    iterator: function(callback) {
-        for(var name in this._storage) {
-            callback(this._storage[name], name);
-        }
-    },
-
-    /**
-     * remove element by id
-     * @param {Object} id
-     *
-     */
-    remove: function(id) {
-        var d = this._storage[id];
-        if(this._storage.hasOwnProperty(id)) {
-            delete this._storage[id];
-            this._size--;
-        }
-        return d;
-    },
-
-    /**
-     * remove element
-     * @param {Object} element
-     *
-     */
-    removeByElement: function(data) {
-        if(!data) return undefined;
-        var id = this.getId(data);
-        if(this._storage[id] === data) {
-            return this.remove(id);
-        }
-        return undefined;
-    },
-
-    /**
-     * clear cache
-     *
-     */
-    clear: function() {
-        this._storage = {};
-        this._size = 0;
-    },
-
-    /**
-     * get cache by id
-     * @param {String} id
-     *
-     */
-    get: function(id) {
-        return this._storage[id];
-    },
-
-    /**
-     * get size of cache items
-     *
-     */
-    size: function() {
-        return this._size;
-    }
-});});
-/**
- * @class   tupai.ui.TableView
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * An instance of TableView is a means for displaying hierarchical lists of information.
- * You must define some delegate method in your ViewController
- *
- * ### delegate methods
- * -  numberOfRows(tableView);
- * -  cellForRowAtIndexPath(indexPath, tableView);
- * -  cellForRowAtTop(tableView);
- * -  cellForRowAtBottom(tableView);
- *
- * ### simple example
- *     Package()
- *     .use('tupai.ui.View')
- *     .use('tupai.ui.TableView')
- *     .use('tupai.ViewController')
- *     .define('ViewEventsPlugin', function(cp) { return cp.ViewController.extend({
- *         viewInit: function() {
- *             this._data = ['red','blue','green'];
- *             var view = new cp.TableView();
- *             view.setTableViewDelegate(this);
- *             this.setContentView(view);
- *         },
- *         numberOfRows: function() {
- *             return this._data.length;
- *         },
- *         cellForRowAtTop: function() {
- *             if(this._headerView == null) {
- *                 this._headerView = new cp.View();
- *                 this._headerView.setValue('header');
- *             }
- *             return this._headerView;
- *         },
- *         cellForRowAtBottom: function() {
- *             if(this._bottomView == null) {
- *                 this._bottomView = new cp.View();
- *                 this._bottomView.setValue('footer');
- *             }
- *             return this._bottomView;
- *         },
- *         cellForRowAtIndexPath: function(indexPath, tableView) {
- *             var row = indexPath.row;
- *             var cell = tableView.dequeueReusableCell('demo_cell');
- *             if(cell == null) {
- *                 cell = new cp.View();
- *             }
- *             cell.setValue(this._data[row]);
- *             return cell;
- *         }
- *     });});
- *
- */
-Package('tupai.ui')
-.use('tupai.ui.View')
-.define('TableView', function(cp) { return cp.View.extend({
-    _tableViewDelegate: undefined,
-
-    /**
-     * initialize
-     * @param {Object} [args]
-     * see {@link tupai.ui.View#initialize}
-     *
-     */
-    initialize : function (args) {
-
-        cp.View.prototype.initialize.apply(this, arguments);
-    },
-
-    /**
-     * set table view delegate
-     * @param {Object} delegate
-     *
-     * ### delegate methods
-     * -  numberOfRows(tableView);
-     * -  cellForRowAtIndexPath(indexPath, tableView);
-     * -  cellForRowAtTop(tableView);
-     * -  cellForRowAtBottom(tableView);
-     */
-    setTableViewDelegate: function(tableViewDelegate) {
-        this._tableViewDelegate = tableViewDelegate;
-    },
-
-    /**
-     * Returns a reusable table-view cell object located by its type
-     * @param {String} type
-     *
-     */
-    dequeueReusableCell: function(type) {
-        return null;
-    },
-
-    /**
-     * set filter to tableview to control show and hide the cell
-     * @param {Function} callback
-     *
-     */
-    setFilter: function(callback) {
-        this.iterateChildren(function(cell) {
-
-            if(callback(cell)) {
-                cell.show();
-            } else {
-                cell.hide();
-            }
-        });
-    },
-
-    /**
-     * load the top new data
-     *
-     */
-    loadTopNewData: function() {
-        return this.reloadRowsFrom();
-    },
-
-    /**
-     * load the bottom new data
-     *
-     */
-    loadBottomNewData: function(length) {
-        var from=this._numberOfRows || 0;
-        if(length !== undefined) {
-            var newLength = this._tableViewDelegate.numberOfRows(this);
-            from -= (length - (newLength - from));
-        }
-        return this.reloadRowsFrom(from);
-    },
-    _addCell: function(cell) {
-        this.addSubView(cell);
-    },
-
-    /**
-     * reload this tableView
-     *
-     */
-    reloadData: function() {
-        return this.reloadRowsFrom(0);
-    },
-
-    /**
-     * reload this tableView
-     * @param {Number} [from]
-     *
-     */
-    reloadRowsFrom: function(from) {
-
-        if(from == undefined || from < 0) from = 0;
-
-        var domFrom = from;
-        if(this._hasHeader) domFrom ++;
-        if(!this.clearChildrenByRange(domFrom)) return;
-
-        if(this._tableViewDelegate.cellForRowAtTop) {
-            cell = this._tableViewDelegate.cellForRowAtTop(this);
-            if(cell) {
-                if(!this._hasHeader) {
-                    this.addSubView(cell);
-                }
-                this._hasHeader = true;
-            } else {
-                if(this._hasHeader) {
-                    this.removeChildAt(0);
-                }
-                this._hasHeader = false;
-            }
-        }
-
-        var numberOfRows = this._tableViewDelegate.numberOfRows(this);
-        this._numberOfRows = numberOfRows;
-        if(from < numberOfRows) {
-            for(var i=from;i<numberOfRows;i++) {
-                var cell = this._tableViewDelegate.cellForRowAtIndexPath({row: i}, this);
-                if(!cell) throw new Error('you need return view by row ' + i);
-                this._addCell(cell);
-            }
-        }
-
-        if(this._tableViewDelegate.cellForRowAtBottom) {
-            cell = this._tableViewDelegate.cellForRowAtBottom(this);
-            cell && this.addSubView(cell);
-        }
-        this.render();
-    }
-});});
-/*
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @version 1.0
- * @deprecated
- * */
-Package('tupai.ui')
-.use('tupai.ui.View')
-.define('TemplateView', function(cp) { return cp.View.extend({
-    initialize : function (args) {
-        console.error('TemplateView is Deprecated, use View instead');
-        cp.View.prototype.initialize.apply(this, arguments);
-    },
 });});
 /**
  * @class   tupai.Window

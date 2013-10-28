@@ -23,13 +23,18 @@ exports.make = function(target, options) {
 
     var tupaiConfig = tupai.getConfig();
     var outputJs = path.join(tupaiConfig.web, 'js', tupaiConfig.name + '.js');
+    var outputTupaiJs = path.join(tupaiConfig.web, 'js', 'tupai.min.js');
     if(target === 'clean') {
-        console.log('unlink ' + outputJs);
-        if(fs.existsSync(outputJs)) {
-            fs.unlinkSync(outputJs);
-        }
+        console.log('unlink files:');
 
-        console.log('unlink ' + tupaiConfig.gen);
+        [outputJs, outputTupaiJs].forEach(function(f) {
+            console.log('    ' + f);
+            if(fs.existsSync(f)) {
+                fs.unlinkSync(f);
+            }
+        });
+
+        console.log('    ' + tupaiConfig.gen);
         tupai.rmdirSync(tupaiConfig.gen);
         return;
     }
@@ -42,6 +47,10 @@ exports.make = function(target, options) {
        ],
        output: path.join(tupaiConfig.gen, tupaiConfig.name + '.js')
     };
+    var tupaijs = path.join(__dirname, '..', '..', 'releases', 'web', 'tupai-last.min.js');
+    console.log('copy tupai.js:');
+    fs.createReadStream(tupaijs).pipe(fs.createWriteStream(outputTupaiJs));
+    console.log('    ' + outputTupaiJs);
 
     console.log('gen template files:');
     console.log('    ' + tupaiConfig.templates + ' -> ' + tupaiConfig.genTemplates);
@@ -61,40 +70,36 @@ exports.make = function(target, options) {
                 'Config'
             );
             console.log('consistency check: ');
-            tupai.merge('check', meOptions, {
-                end: function(code) {
-                    // merge classes to one file
-                    if(code == 0) {
-                        console.log('    ok');
-                    } else {
-                        console.error('    ng');
-                        return;
-                    }
-                    console.log('merge classes: ');
-                    tupai.merge('merge', meOptions, {
-                        end: function() {
-                            var inputJs = meOptions.output;
-                            if(target === 'debug') {
-                                // copy it
-                                console.log('copy: ');
-                                console.log('    ' + inputJs + ' -> ' + outputJs);
-                                fs.createReadStream(inputJs)
-                                .pipe(fs.createWriteStream(outputJs));
-                            } else {
-                                // compress js file
-                                console.log('compress: ');
-                                console.log('    ' + inputJs + ' -> ' + outputJs);
-                                tupai.compress(
-                                    inputJs,
-                                    {
-                                        type: 'js',
-                                        output: outputJs
-                                    }
-                                );
-                            }
-                        }
-                    });
+            tupai.merge('check', meOptions, function(code) {
+                // merge classes to one file
+                if(code == 0) {
+                    console.log('    ok');
+                } else {
+                    console.error('    ng');
+                    return;
                 }
+                console.log('merge classes: ');
+                tupai.merge('merge', meOptions, function() {
+                    var inputJs = meOptions.output;
+                    if(target === 'debug') {
+                        // copy it
+                        console.log('copy: ');
+                        console.log('    ' + inputJs + ' -> ' + outputJs);
+                        fs.createReadStream(inputJs)
+                        .pipe(fs.createWriteStream(outputJs));
+                    } else {
+                        // compress js file
+                        console.log('compress: ');
+                        console.log('    ' + inputJs + ' -> ' + outputJs);
+                        tupai.compress(
+                            inputJs,
+                            {
+                                type: 'js',
+                                output: outputJs
+                            }
+                        );
+                    }
+                });
             });
         }
     });

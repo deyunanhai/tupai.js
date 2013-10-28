@@ -37,25 +37,26 @@ function getClassFromClassName(className, arr) {
         } else {
             // use a package
             var p = path.join(classPath[i], className.split('.').join(path.sep));
-            if(!fs.existsSync(p)) return false;
-            var stats = fs.statSync(p);
-            if(stats.isDirectory()) {
-                var files = fs.readdirSync();
-                for(var i=0,n=files.length; i<n; i++) {
-                    var name = files[i];
-                    var filePath = path.join(p, name);
-                    if(!name.match(/\.js$/)) continue;
-                    stats = fs.statSync(filePath);
-                    if(!stats.isFile()) continue;
+            if(fs.existsSync(p)) {
+                var stats = fs.statSync(p);
+                if(stats.isDirectory()) {
+                    var files = fs.readdirSync();
+                    for(var i=0,n=files.length; i<n; i++) {
+                        var name = files[i];
+                        var filePath = path.join(p, name);
+                        if(!name.match(/\.js$/)) continue;
+                        stats = fs.statSync(filePath);
+                        if(!stats.isFile()) continue;
 
-                    name = name.replace(/\.js$/, '');
-                    var c = {
-                        className: className+'.'+name,
-                        filePath:  filePath
-                    };
-                    arr.push(c);
+                        name = name.replace(/\.js$/, '');
+                        var c = {
+                            className: className+'.'+name,
+                            filePath:  filePath
+                        };
+                        arr.push(c);
+                    }
+                    return true;
                 }
-                return true;
             }
         }
     }
@@ -157,7 +158,7 @@ function parseDirtyUseList(classzz, map) {
        }
        if(!getClassFromClassName(name, arr)) {
            if(!mIgnoreNotFound) {
-               logger.error('cannot found ' + className + ' in ' + classzz.className);
+               logger.error('cannot found ' + name + ' in ' + classzz.className);
            //} else {
                //console.log('cannot found ' + className + ' in ' + classzz.className);
            }
@@ -392,7 +393,7 @@ function check_package(classList) {
     }
 }
 
-exports.run = function(options) {
+function run(options) {
 
     options = options || {};
     var action            = options['action'];
@@ -469,11 +470,19 @@ exports.run = function(options) {
         logger.error('unknow action ' + action);
     }
 
+    /*
     if(logger.errorCount > 0) {
         console.error('got some errores');
-        process.exit(1);
-    } else return 0;
+    }
+    */
+    return logger.errorCount;
 }
+
+exports.run = function(options, end) {
+    var ret=run(options);
+    end && end(ret)
+    return ret;
+};
 /*
 run({
     action: 'merge',

@@ -161,10 +161,11 @@ exports.compileTemplates = templates.compileTemplates;
 var configs = require(path.join(__dirname, 'configs'));
 exports.compileConfigSync = configs.compileConfigSync;
 
-exports.merge = function(action, options, execOptions) {
+var autoMerge = require('./auto_merge.js');
+exports.merge = function(action, options, end) {
     options = options || {};
     options['action'] = action;
-    require('./auto_merge.js').run(options);
+    autoMerge.run(options, end);
 };
 
 exports.compress = function(file, options, execOptions) {

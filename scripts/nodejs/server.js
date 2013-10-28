@@ -193,6 +193,13 @@ function configDebugMode(app) {
                 var content = fs.readFileSync(filePath).toString();
                 res.send(content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml));
             }
+        } else if(p == '/js/tupai.min.js') {
+            if(fs.existsSync(path.join(mConfig.web,'js','tupai.min.js'))) {
+                next();
+            } else {
+                var content = fs.readFileSync(path.join(webDir, 'tupai-last.min.js')).toString();
+                res.send(content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml));
+            }
         } else {
             next();
         }
