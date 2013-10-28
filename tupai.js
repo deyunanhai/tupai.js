@@ -1,5 +1,5 @@
 /**
- * Helpers made available via require('js_analysis') once package is
+ * Helpers made available via require('tupaijs') once package is
  * installed.
  */
 
