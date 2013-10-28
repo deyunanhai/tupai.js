@@ -103,5 +103,3 @@ Author
 
 bocelli.hu <bocelli.hu@gmail.com>
 
-microsoft windows does not support this moment
-=========
