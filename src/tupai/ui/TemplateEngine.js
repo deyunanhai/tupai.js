@@ -67,7 +67,13 @@ Package('tupai.ui')
             bindToElement(element, data);
             return element;
         } else if(template) {
-            var root = document.createElement('div');
+            var rootTag = 'div';
+            if(template.match(/^<(tr|th)>/)) {
+                rootTag = 'tbody';
+            } else if(template.match(/^<(tbody|thead)>/)) {
+                rootTag = 'table';
+            }
+            var root = document.createElement(rootTag);
             root.innerHTML = template;
             var elem = root.children[0];
             bindToElement(elem, data);

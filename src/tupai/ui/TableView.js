@@ -68,6 +68,7 @@ Package('tupai.ui')
     initialize : function (args) {
 
         cp.View.prototype.initialize.apply(this, arguments);
+        this._container = this;
     },
 
     /**
@@ -129,8 +130,19 @@ Package('tupai.ui')
         }
         return this.reloadRowsFrom(from);
     },
-    _addCell: function(cell) {
-        this.addSubView(cell);
+
+    /**
+     * set table view container id
+     *
+     */
+    setContainerId: function(id) {
+        var v = this.findViewById(id);
+        if(!v) throw new Error('can\'t find view by ' + id);
+        this._container = v;
+    },
+
+    _addSubView: function(view) {
+        this._container.addSubView(view);
     },
 
     /**
@@ -152,13 +164,13 @@ Package('tupai.ui')
 
         var domFrom = from;
         if(this._hasHeader) domFrom ++;
-        if(!this.clearChildrenByRange(domFrom)) return;
+        if(!this._container.clearChildrenByRange(domFrom)) return;
 
         if(this._tableViewDelegate.cellForRowAtTop) {
             cell = this._tableViewDelegate.cellForRowAtTop(this);
             if(cell) {
                 if(!this._hasHeader) {
-                    this.addSubView(cell);
+                    this._addSubView(cell);
                 }
                 this._hasHeader = true;
             } else {
@@ -175,14 +187,14 @@ Package('tupai.ui')
             for(var i=from;i<numberOfRows;i++) {
                 var cell = this._tableViewDelegate.cellForRowAtIndexPath({row: i}, this);
                 if(!cell) throw new Error('you need return view by row ' + i);
-                this._addCell(cell);
+                this._addSubView(cell);
             }
         }
 
         if(this._tableViewDelegate.cellForRowAtBottom) {
             cell = this._tableViewDelegate.cellForRowAtBottom(this);
-            cell && this.addSubView(cell);
+            cell && this._addSubView(cell);
         }
-        this.render();
+        this._container.render();
     }
 });});

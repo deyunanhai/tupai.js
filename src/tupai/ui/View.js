@@ -630,7 +630,7 @@ Package('tupai.ui')
         this._checkElement();
 
         if(this.getStyle('display') === 'block') return;
-        this.setStyle('display', 'block');
+        this.setStyle('display', null);
         this.fire('show');
         if(this._baseViewDelete && this._baseViewDelete.viewDidShow) {
             this._baseViewDelete.viewDidShow(this);
@@ -642,7 +642,7 @@ Package('tupai.ui')
      *
      */
     toggle : function () {
-        if (this._element.css('display') === 'block') {
+        if (this.getStyle('display') === 'block') {
             this.hide();
             return 'hide';
         } else {
@@ -668,7 +668,9 @@ Package('tupai.ui')
         return this._element.tagName;
     },
 
-    _isInteger : function(value) {
+    _isInteger: function(value) {
+
+        if(value == undefined) return 0;
         return (parseInt(value, 10).toString() === value.toString()) ? 1 : 0;
     },
 

@@ -88,6 +88,9 @@ var rmdirSync = function(dir) {
     return true;
 };
 
+exports.getBinPath = function(name) {
+    return path.join(baseDir, 'node_modules', '.bin', name);
+};
 exports.baseDir = baseDir;
 exports.format = format;
 exports.execute = execute;

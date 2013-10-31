@@ -23,7 +23,7 @@ function compileTemplate(url, output, packageName, options) {
             output,
             packageName
         ];
-        tupai.execute(require('phantomjs').path, pargs, {
+        tupai.execute(tupai.getBinPath('phantomjs'), pargs, {
             onStdoutData: options.onStdoutData,
             onStderrData: options.onStderrData,
             end: function(code) {

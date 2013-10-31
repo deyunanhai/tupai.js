@@ -1602,7 +1602,13 @@ Package('tupai.ui')
             bindToElement(element, data);
             return element;
         } else if(template) {
-            var root = document.createElement('div');
+            var rootTag = 'div';
+            if(template.match(/^<(tr|th)>/)) {
+                rootTag = 'tbody';
+            } else if(template.match(/^<(tbody|thead)>/)) {
+                rootTag = 'table';
+            }
+            var root = document.createElement(rootTag);
             root.innerHTML = template;
             var elem = root.children[0];
             bindToElement(elem, data);
@@ -3555,7 +3561,7 @@ Package('tupai.ui')
         this._checkElement();
 
         if(this.getStyle('display') === 'block') return;
-        this.setStyle('display', 'block');
+        this.setStyle('display', null);
         this.fire('show');
         if(this._baseViewDelete && this._baseViewDelete.viewDidShow) {
             this._baseViewDelete.viewDidShow(this);
@@ -3567,7 +3573,7 @@ Package('tupai.ui')
      *
      */
     toggle : function () {
-        if (this._element.css('display') === 'block') {
+        if (this.getStyle('display') === 'block') {
             this.hide();
             return 'hide';
         } else {
@@ -3593,7 +3599,9 @@ Package('tupai.ui')
         return this._element.tagName;
     },
 
-    _isInteger : function(value) {
+    _isInteger: function(value) {
+
+        if(value == undefined) return 0;
         return (parseInt(value, 10).toString() === value.toString()) ? 1 : 0;
     },
 
@@ -3783,6 +3791,7 @@ Package('tupai.ui')
     initialize : function (args) {
 
         cp.View.prototype.initialize.apply(this, arguments);
+        this._container = this;
     },
 
     /**
@@ -3844,8 +3853,19 @@ Package('tupai.ui')
         }
         return this.reloadRowsFrom(from);
     },
-    _addCell: function(cell) {
-        this.addSubView(cell);
+
+    /**
+     * set table view container id
+     *
+     */
+    setContainerId: function(id) {
+        var v = this.findViewById(id);
+        if(!v) throw new Error('can\'t find view by ' + id);
+        this._container = v;
+    },
+
+    _addSubView: function(view) {
+        this._container.addSubView(view);
     },
 
     /**
@@ -3867,13 +3887,13 @@ Package('tupai.ui')
 
         var domFrom = from;
         if(this._hasHeader) domFrom ++;
-        if(!this.clearChildrenByRange(domFrom)) return;
+        if(!this._container.clearChildrenByRange(domFrom)) return;
 
         if(this._tableViewDelegate.cellForRowAtTop) {
             cell = this._tableViewDelegate.cellForRowAtTop(this);
             if(cell) {
                 if(!this._hasHeader) {
-                    this.addSubView(cell);
+                    this._addSubView(cell);
                 }
                 this._hasHeader = true;
             } else {
@@ -3890,15 +3910,15 @@ Package('tupai.ui')
             for(var i=from;i<numberOfRows;i++) {
                 var cell = this._tableViewDelegate.cellForRowAtIndexPath({row: i}, this);
                 if(!cell) throw new Error('you need return view by row ' + i);
-                this._addCell(cell);
+                this._addSubView(cell);
             }
         }
 
         if(this._tableViewDelegate.cellForRowAtBottom) {
             cell = this._tableViewDelegate.cellForRowAtBottom(this);
-            cell && this.addSubView(cell);
+            cell && this._addSubView(cell);
         }
-        this.render();
+        this._container.render();
     }
 });});
 /*
