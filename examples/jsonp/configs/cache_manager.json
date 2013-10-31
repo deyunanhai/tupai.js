@@ -1,8 +1,0 @@
-{
-    "timeline": {
-        "config": {
-            "memCache": { },
-            "localStorage": false
-        }
-    }
-}

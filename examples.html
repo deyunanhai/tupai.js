@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>tupai.js — Minimal and Flexible JavaScript MVC Framework.</title>
+  <meta name="description" content="tupai.js is a minimal and flexible JavaScript MVC framework.<br>providing a robust set of features for building single and multi-pages.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <!-- Bootstrap -->
+  <link href="components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" media="screen">
+  <link href="dist/css/doc.min.css" rel="stylesheet" media="screen">
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+  <script src="components/bootstrap/assets/js/html5shiv.js"></script>
+  <script src="components/bootstrap/assets/js/respond.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <!-- Fixed navigation -->
+<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+  <!-- Brand and toggle get grouped for better mobile display -->
+  <div class="container">
+  <div class="navbar-header">
+    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+      <span class="sr-only">Toggle navigation</span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    <a class="navbar-brand" href="index.html"><img src="img/logo-tupaiJS.png" alt="tupai.js" width="70" height="35"></a>
+  </div>
+  <!-- Collect the nav links, forms, and other content for toggling -->
+  <div class="collapse navbar-collapse navbar-ex1-collapse">
+    <ul class="nav navbar-nav">
+      <li><a href="index.html">Home</a></li>
+      <li class="active"><a href="#">Examples</a></li>
+      <li><a href="docs/">Documentation</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="license.html">License</a></li>
+      <li><a href="terms_of_use.html">Terms of Use</a></li>
+    </ul>
+  </div><!-- /.navbar-collapse -->
+  </div>
+</nav>
+  <!-- /Fixed navigation -->
+
+
+  <!-- Contents -->
+  <div class="container">
+
+    <div class="page-header">
+        <h1><span class="icon-heading icon-heading-example"></span> Examples</h1>
+    </div>
+
+    <h2>Hello world</h2>
+    <p></p>
+    <div>
+        <pre class="prettyprint">
+Package()
+.define('Main', {
+    print: function() {
+        console.log('hello world!');
+    }
+}).run(function(cp) {
+    cp.Main.print();
+});
+        </pre>
+    </div>
+    <p><a href="https://github.com/deyunanhai/tupai.js/blob/master/examples/package/helloword/helloword.html">view source</a></p>
+
+    <h2>inheritance</h2>
+    <p>inheritance example</p>
+    <div>
+        <pre class="prettyprint">
+Package('test1')
+.define('Parent', function(cp) { return Package.Class.extend({
+    print: function() {
+        console.log('print by parent');
+    }
+});});
+
+Package('test2')
+.use('test1.Parent')
+.define('Child', function(cp) { return cp.Parent.extend({
+    print: function() {
+        console.log('print by child');
+    },
+    printByParent: function() {
+        this.SUPER.print.apply(this, arguments);
+    }
+});});
+
+
+Package()
+.use('test2.Child')
+.run(function(cp) {
+    var c = new cp.Child();
+    c.print();
+    c.printByParent();
+});
+        </pre>
+    </div>
+    <p><a href="https://github.com/deyunanhai/tupai.js/blob/master/examples/package/helloword/inheritance.html">view source</a></p>
+
+    <h2>transit</h2>
+    <p>show you how to use TransitManager to control page redirect.</p>
+    <p><a href="https://github.com/deyunanhai/tupai.js/tree/master/examples/transit">view source</a></p>
+
+    <h2>twitter</h2>
+    <p>show you how to implement an application like twitter use tupai.js.</p>
+    <p><a href="https://github.com/deyunanhai/tupai.js/tree/master/examples/twitter">view source</a></p>
+
+    <h2>all examples</h2>
+    <p><a href="https://github.com/deyunanhai/tupai.js/tree/master/examples">view source</a></p>
+
+  </div><!-- /container -->
+  <!-- /Contents -->
+
+  <div class="footer">
+    <footer class="container">
+        <p>Code licensed under the <a href="license.html">MIT License</a>.</p>
+    </footer>
+  </div>
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="components/jquery/jquery.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="components/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="lib/google-code-prettify/run_prettify.js"></script>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-44860373-1', 'tupaijs.com');
+    ga('send', 'pageview');
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+// This file is overriding the class of bootstrap.
+
+body {
+  padding-top: 70px;
+}
+
+// navigation
+.navbar-brand {
+  padding-top:7px;
+  padding-bottom: 0;
+}
+
+.btn-social {
+  float: right;
+  margin-top: -5px;
+  padding-right: 15px;
+}
+
+
+.jumbotron {
+  background: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding-top: 40px;
+  text-align: center;
+  h1 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    img {
+      width: 100%;
+      height: 100%;
+      max-width: 350px;
+      max-height: 350px;
+    }
+  }
+}
+
+.btn-primary {
+  background-color: #00aae5;
+}
+
+.icon-heading {
+    background: url(/img/icon-sprite.png) 0 0 no-repeat;
+    -webkit-background-size: 64px 32px;
+            background-size: 64px 32px;
+    display: inline-block;
+    height: 32px;
+    vertical-align: -3px;
+    width: 32px;
+}
+.icon-heading-example {
+    background-position: 0 0;
+}
+.icon-heading-fag {
+    background-position: -32px 0;
+}
+
+.is-border-none {
+  border: none;
+}
+
+.footer {
+  border-top: 1px solid #ddd;
+  margin: 40px 0 10px;
+  padding: 20px 0 10px;
+}
+

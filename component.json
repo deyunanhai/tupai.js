@@ -1,0 +1,7 @@
+{
+  "name" : "Site of tupai.js intro.",
+  "version" : "0.1",
+  "dependencies" : {
+    "bootstrap" : null
+  }
+}
