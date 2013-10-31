@@ -102,8 +102,7 @@ Package('tupai.ui')
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
-            }
-            else {
+            } else {
                 elm.value = value;
             }
         } else if(elm.src !== undefined) {

@@ -265,7 +265,7 @@ function watchFs() {
             }
         },
         {
-            regexp: new RegExp(mConfig.templates + "\/.*\.html"),
+            regexp: new RegExp(mConfig.templates + "\/.*\.html$"),
             fn: function(changeType, filePath) {
                 if(changeType === 'unlink') {
                     fs.unlinkSync(path.join('gen', filePath.replace(/\.html$/, '.js')));
@@ -279,7 +279,7 @@ function watchFs() {
             }
         },
         {
-            regexp: new RegExp(mConfig.configs + "\/.*\.json"),
+            regexp: new RegExp(mConfig.configs + "\/.*\.json$"),
             fn: function(changeType, filePath) {
                 try {
                     genConfigs();

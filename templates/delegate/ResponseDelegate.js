@@ -4,9 +4,9 @@ Package(<%if(packageName){%>'<%=packageName%>'<%}%>)
     didHttpRequestSuccess: function(name, reqName, res, req) {
 
         var app = cp.Application.instance;
-        var responseObj = res.response;
+        var responseObj = res.responseObj;
         if(!responseObj) {
-            res.response = responseObj = JSON.parse(res.responseText);
+            res.responseObj = responseObj = JSON.parse(res.responseText);
         }
 
         /*

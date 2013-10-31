@@ -225,6 +225,17 @@ Package('tupai')
     },
 
     /**
+     * find view by id in contentView (set by data-ch-id)
+     * @param {String} id
+     * @return {tupai.ui.View}
+     *
+     */
+    findViewById: function() {
+        if(!this._view) return null;
+        return this._view.findViewById.apply(this._view, arguments);
+    },
+
+    /**
      * will call by View when did loaded.
      * @param {tupai.ui.View} view
      */

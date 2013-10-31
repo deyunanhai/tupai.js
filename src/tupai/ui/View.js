@@ -180,8 +180,7 @@ Package('tupai.ui')
     _onChildrenRender: function(args) {
 
         var containerNode = this._getContainerNode();
-        for(var i=0,n=this._children.length;i<n;i++) {
-            var child = this._children[i];
+        var renderView = function(child) {
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
             if(firsttime) {
@@ -195,6 +194,16 @@ Package('tupai.ui')
                 child._didLoadFlg = true;
             }
         };
+        for(var i=0,n=this._children.length;i<n;i++) {
+            var child = this._children[i];
+            renderView(child);
+        };
+        if(this._viewIDMap) {
+            for(var id in this._viewIDMap) {
+                var child = this._viewIDMap[id];
+                renderView(child);
+            }
+        }
     },
     _getContainerNode: function() {
         return this._element;
@@ -348,6 +357,7 @@ Package('tupai.ui')
             view = this._viewIDMap[id] = new cp.View();
             view._element = element;
             view._parent = this;
+            view._rendered = true;
         }
 
         return view;
@@ -390,6 +400,12 @@ Package('tupai.ui')
      */
     clearChildren: function() {
 
+        if(this._viewIDMap) {
+            for(var id in this._viewIDMap) {
+                var child = this._viewIDMap[id];
+                this._removeChild(child);
+            }
+        }
         return this.clearChildrenByRange(0);
     },
 
@@ -413,7 +429,8 @@ Package('tupai.ui')
             this.removeChildAt(from);
         }
 
-        this._children = this._children.slice(0, from).concat(this._children.slice(to+1));
+        // do this in removeChildAt
+        //this._children = this._children.slice(0, from).concat(this._children.slice(to+1));
         return true;
     },
 
