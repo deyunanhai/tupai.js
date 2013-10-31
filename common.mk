@@ -5,6 +5,6 @@ COMPRESSOR=../bin/tupaijs compress
 JS_VERSION=0.1
 CP=@cp
 MKDIR=@mkdir
-RM=@rm
+RM=@rm -f
 CAT=@cat
 
