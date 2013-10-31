@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js"><span id='tupai-ui-ViewEvents'>/**
+</span> * @class   tupai.ui.ViewEvents
+ * @author &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @docauthor &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @since tupai.js 0.1
+ *
+ * bind and unbind HTML events
+ * you can make a plugin by override the methods
+ * also you can override the all of methods or some of it.
+ *
+ * ### plugin example
+ *     Package('plugin')
+ *     .use('tupai.ui.ViewEvents')
+ *     .use('tupai.util.HashUtil')
+ *     .define('ViewEventsPlugin', function(cp) {
+ *         var bind = function(tarElement, event, callback, useCapture) {
+ *             console.log('bind');
+ *             return Super.bind.apply(undefine, arguments);
+ *         };
+ *
+ *         var unbind = function(tarElement, event, callback) {
+ *             console.log('unbind');
+ *             return Super.unbind.apply(undefine, arguments);
+ *         };
+ *
+ *         var Super = cp.HashUtil.swap(cp.ViewEvents, {
+ *             bind: bind,
+ *             unbind: unbind
+ *         })
+ *     });
+ *
+ */
+Package('tupai.ui')
+.define('ViewEvents', function(cp) {
+
+<span id='tupai-ui-ViewEvents-method-bind'>    /**
+</span>     * bind event to element
+     * @param {String} event
+     * @param {Function} callback
+     * @param {Boolean} useCapture
+     *
+     */
+    var bind = function(tarElement, event, callback, useCapture) {
+        if(!tarElement || !event || !callback) throw new Error('missing required parameters');
+        return tarElement.addEventListener(event, callback, useCapture);
+    };
+
+<span id='tupai-ui-ViewEvents-method-unbind'>    /**
+</span>     * unbind event to element
+     * @param {String} event
+     * @param {Function} callback
+     *
+     */
+    var unbind = function(tarElement, event, callback) {
+        if(!tarElement || !event || !callback) throw new Error('missing required parameters');
+        return tarElement.removeEventListener(event, callback);
+    };
+
+    return {
+        bind: bind,
+        unbind: unbind
+    };
+});
+</pre>
+</body>
+</html>

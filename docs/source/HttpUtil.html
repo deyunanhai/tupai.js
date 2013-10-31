@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * @author &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @version 1.0
+ * */
+Package('tupai.util')
+.define('HttpUtil', function(cp) {
+
+    function getQueryStringByUrl(url, key, default_) {
+        if (default_==null) default_='';
+        key = key.replace(/[\[]/,'\\\[').replace(/[\]]/,'\\\]');
+        var regex = new RegExp('[\\?&amp;]'+key+'=([^&amp;#]*)');
+        var qs = regex.exec(url);
+        if(qs == null)
+            return default_;
+        else
+            return qs[1];
+    }
+    function getUrlWithoutQueryString(url) {
+        return url.split('?')[0];
+    }
+    function getQueryString(key, default_) {
+        return getQueryStringByUrl(window.location.href, key, default_);
+    }
+    function compareUrlWithOutQueryString(srcUrl, tarUrl) {
+        return (getUrlWithoutQueryString(srcUrl) ==
+                getUrlWithoutQueryString(tarUrl));
+    }
+
+    function createRequester() {
+        var xhr;
+        try { xhr = new XMLHttpRequest(); } catch(e) {
+            try { xhr = new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {
+                try { xhr = new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {
+                    try { xhr = new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {
+                        try { xhr = new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {
+                            throw new Error( 'This browser does not support XMLHttpRequest.' );
+                        }
+                    }
+                }
+            }
+        }
+        return xhr;
+    }
+
+    function encode(obj) {
+        var set = [], key;
+
+        for ( key in obj ) {
+            set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
+        }
+
+        return set.join('&amp;');
+    }
+
+    function encodeJson(obj) {
+
+        if( typeof obj === 'object' &amp;&amp; obj !== null ) {
+            var d;
+            if (obj instanceof Array) {
+                d = [];
+                for(var i=0,n=obj.length;i&lt;n;i++) {
+                    d.push(encodeJson(obj[i]));
+                }
+            } else {
+                d = {};
+                for ( var key in obj ) {
+                    d[key] = encodeJson(obj[key]);
+                }
+            }
+            return d;
+        } else {
+            return encodeURIComponent(obj);
+        }
+    }
+
+    function doAjax(url, success, error, options) {
+        var xhr = createRequester(),
+            options = options || {},
+            success = success || function() {},
+            error = error || function() {},
+            method = options.method || 'GET',
+            header = options.header || {},
+            ctype = options.ctype || (( method === 'POST' ) ? 'application/x-www-form-urlencoded' : ''),
+            data = options.data || '',
+            key;
+
+        xhr.onreadystatechange = function() {
+            if ( xhr.readyState === 4 ) {
+                if ( (xhr.status &gt;= 200 &amp;&amp; xhr.status &lt; 300) || xhr.status == 0 ) {
+                    success(xhr.responseText, xhr);
+                } else {
+                    error(xhr);
+                }
+            }
+        };
+
+        if ( typeof data === 'object' ) {
+            if(options.type === 'json') {
+                data = JSON.stringify(encodeJson(data));
+            } else {
+                data = encode(data);
+            }
+        }
+
+        //console.log(method + ' ' + url + ' -- ' + data);
+        xhr.open(method, url, true);
+
+        if ( ctype ) {
+            xhr.setRequestHeader('Content-Type', ctype);
+        }
+
+        for ( key in header ) {
+            xhr.setRequestHeader(key, header[key]);
+        }
+
+        //console.log(method + ' ' + url + ' -- ' + data);
+        xhr.send(data);
+
+        return xhr;
+    }
+
+    var loadFlg = false;
+    var ajaxQueue = [];
+    var onLoadFunc = function() {
+        setTimeout(function(){
+            loadFlg = true;
+            var item;
+            while((item=ajaxQueue.shift())) {
+                doAjax.apply(this, item.param);
+            }
+        },10);
+    }
+    if(window.addEventListener) {
+        window.addEventListener('load', onLoadFunc, false);
+    } else {
+        window.attachEvent('onload', onLoadFunc);
+    }
+
+    function doAfterLoad(param) {
+        if(!loadFlg) ajaxQueue.push({param: param});
+        else doAjax.apply(this, param);
+    }
+
+    return {
+        encode: encode,
+        ajax: function(url, success, error, options) {
+            doAfterLoad([url, success, error, options]);
+        }
+    };
+});
+</pre>
+</body>
+</html>

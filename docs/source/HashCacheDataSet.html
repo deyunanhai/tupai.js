@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js"><span id='tupai-model-caches-HashCacheDataSet'>/**
+</span> * @class   tupai.model.caches.HashCacheDataSet
+ * @author &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @docauthor &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @since tupai.js 0.1
+ *
+ * this class instance is create by HashCache.
+ * see {@link tupai.model.caches.HashCache}
+ *
+ */
+Package('tupai.model.caches')
+.use('tupai.model.DataSet')
+.define('HashCacheDataSet', function(cp) { return cp.DataSet.extend({
+
+<span id='tupai-model-caches-HashCacheDataSet-method-initialize'>    /**
+</span>     * initialize
+     * @param {Object} cache cache object
+     * @param {Number} size cache size
+     * @param {Object} options
+     * @param {Function} [options.filter]
+     *
+     */
+    initialize: function(cache, size, args) {
+
+        this.SUPER.initialize.apply(this, arguments);
+        if(!cache) throw new Error('missing required parameter. cache');
+
+        this._cache = cache;
+        this._size = size;
+        if(args &amp;&amp; args.filter) {
+            var newCache = {};
+            var limit = args.limit;
+            var count=0;
+            var filter = args.filter;
+            for(var name in cache) {
+                if(filter(cache[name], name)) {
+                    newCache[name] = cache[name];
+                    count++;
+                    if(limit &amp;&amp; (count) &gt;= limit) {
+                        break;
+                    }
+                }
+            }
+            this._cache = newCache;
+            this._size = count;
+        }
+    },
+
+<span id='tupai-model-caches-HashCacheDataSet-method-iterator'>    /**
+</span>     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        var storage = this._cache;
+        for(var name in storage) {
+            callback(storage[name], name);
+        }
+    },
+
+<span id='tupai-model-caches-HashCacheDataSet-method-get'>    /**
+</span>     * get cache by id or index
+     * @param {String} id id or index
+     *
+     */
+    get: function(id) {
+        var storage = this._cache;
+        return storage[id];
+    },
+
+<span id='tupai-model-caches-HashCacheDataSet-method-size'>    /**
+</span>     * get size of cache items
+     *
+     */
+    size: function() {
+        return this._size;
+    }
+});});
+</pre>
+</body>
+</html>

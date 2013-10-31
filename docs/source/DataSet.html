@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js"><span id='tupai-model-DataSet'>/**
+</span> * @class   tupai.model.DataSet
+ * @author &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @docauthor &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @since tupai.js 0.1
+ *
+ * this class instance is create by Cache(HashCache or QueueCache) class
+ * see {@link tupai.model.CacheManager}
+ *
+ */
+Package('tupai.model')
+.define('DataSet', function(cp) { return Package.Class.extend({
+
+<span id='tupai-model-DataSet-method-initialize'>    /**
+</span>     * initialize
+     * @param {Object} cache cache object
+     * @param {Object} options
+     * @param {Function} [options.filter]
+     *
+     */
+    initialize: function(cache, args) {
+    },
+
+<span id='tupai-model-DataSet-method-iterator'>    /**
+</span>     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+    },
+
+<span id='tupai-model-DataSet-method-get'>    /**
+</span>     * get cache by id or index
+     * @param {String} id id or index
+     *
+     */
+    get: function(id) {
+    },
+
+<span id='tupai-model-DataSet-method-size'>    /**
+</span>     * get size of cache items
+     *
+     */
+    size: function() {
+    }
+});});
+</pre>
+</body>
+</html>

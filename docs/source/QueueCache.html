@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * TODO:
+ * - uniq CacheEngine
+ * - sorted CacheEngine
+ * */
+
+<span id='tupai-model-caches-QueueCache'>/**
+</span> * @class   tupai.model.caches.QueueCache
+ * @author &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @docauthor &lt;a href='bocelli.hu@gmail.com'&gt;bocelli.hu&lt;/a&gt;
+ * @since tupai.js 0.1
+ *
+ * cache data in queue
+ * see {@link tupai.model.CacheManager}
+ *
+ */
+Package('tupai.model.caches')
+.use('tupai.util.MemCache')
+.use('tupai.model.caches.QueueCacheDataSet')
+.define('QueueCache', function(cp) { return Package.Class.extend({
+
+<span id='tupai-model-caches-QueueCache-method-initialize'>    /**
+</span>     * initialize
+     * @param {String} name cache name
+     * @param {Object} options
+     * @param {Object} [options.memCache] memory cache config
+     * @param {Number} [options.memCache.limit] memory cache limit
+     * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
+     * @param {Object} [options.localStorage] use localStorage
+     * @param {Object} [options.sesseionStorage] use sesseionStorage
+     * see {@link tupai.model.CacheManager#createCache}
+     *
+     */
+    initialize: function(name, options, delegate) {
+
+        options = options || {};
+
+        var limit, overflowRemoveSize;
+        if(options.memCache) {
+            var c = options.memCache;
+            limit = c.limit;
+            overflowRemoveSize = c.overflowRemoveSize;
+        }
+        this._storage = new cp.MemCache(limit, overflowRemoveSize);
+        this._storage.setDelegate(this);
+        this._attributes = options.attributes;
+
+        if(options.localStorage) {
+            this._nativeStorage = window.localStorage;
+        } else if(options.sessionStorage) {
+            this._nativeStorage = window.sessionStorage;
+        }
+        if(this._nativeStorage) {
+            this._nativeStorageKey = '__tupai_'+name;
+            var dataText = this._nativeStorage[this._nativeStorageKey];
+            if(dataText) {
+                this._storage.swapStorage(JSON.parse(dataText));
+            }
+        }
+
+        this._delegate = delegate;
+        this._name = name;
+    },
+    didMemCacheGC: function() {
+        this._saveToNative();
+        this._delegate &amp;&amp;
+        this._delegate.didCacheGC &amp;&amp;
+        this._delegate.didCacheGC(this._name, this);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-getName'>    /**
+</span>     * get cache name
+     * @return {String} name
+     *
+     */
+    getName: function() {
+        return this._name;
+    },
+
+<span id='tupai-model-caches-QueueCache-method-notifyDataSetChanged'>    /**
+</span>     * notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    notifyDataSetChanged : function(options) {
+        this._saveToNative();
+        this._delegate &amp;&amp;
+        this._delegate.didCacheChanged &amp;&amp;
+        this._delegate.didCacheChanged(this._name, this, options);
+    },
+    _saveToNative: function() {
+        if(this._nativeStorage) {
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+        }
+    },
+
+<span id='tupai-model-caches-QueueCache-method-end'>    /**
+</span>     * end edit the cache and notify cache has been changed
+     * @param {Object} [options] custom options
+     *
+     */
+    end: function(options) {
+        this.notifyDataSetChanged(options);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-query'>    /**
+</span>     * query cache and return {@link tupai.model.DataSet DataSet}
+     * @param {Object} args sess {@link tupai.model.DataSet}
+     * @return {tupai.model.DataSet} DataSet
+     *
+     */
+    query: function(args) {
+        var set = new cp.QueueCacheDataSet(this._storage, args);
+        return set;
+    },
+
+<span id='tupai-model-caches-QueueCache-method-getAttribute'>    /**
+</span>     * get custom attribute by name.
+     * @param {String} name attribute name
+     * @return {Object} attribute value
+     *
+     */
+    getAttribute: function(name) {
+        return this._attributes &amp;&amp; this._attributes[name];
+    },
+
+<span id='tupai-model-caches-QueueCache-method-push'>    /**
+</span>     * push data to cache. the method will not notify cache changed.
+     * you need to call end function to end edit and notify cache changed.
+     * @param {Object} data
+     *
+     */
+    push: function(data) {
+        if(data instanceof Array) {
+            this._storage.concat(data);
+        } else {
+            this._storage.push(data);
+        }
+    },
+
+<span id='tupai-model-caches-QueueCache-method-unshift'>    /**
+</span>     * push data to top of cache
+     * @param {Object} data
+     *
+     */
+    unshift: function(data) {
+        if(data instanceof Array) {
+            this._storage.concatFirst(data);
+        } else {
+            this._storage.unshift(data);
+        }
+    },
+
+<span id='tupai-model-caches-QueueCache-method-filter'>    /**
+</span>     * Creates a new array with all of the elements of this array for which the provided filtering function returns true.
+     * @param {Function} callback
+     * @param {Boolean} [noNotify=false] set this parameter to true will not notify cache changed.
+     *
+     */
+    filter: function(callback, noNotify) {
+        var oldSize = this.size();
+        this._storage.filter(callback);
+        if(!noNotify &amp;&amp; this.size() != oldSize) {
+            this._delegate.didCacheChanged(this._name, this);
+        }
+    },
+
+<span id='tupai-model-caches-QueueCache-method-iterator'>    /**
+</span>     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    iterator: function(callback) {
+        this._storage.iterator(callback);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-remove'>    /**
+</span>     * remove element by index
+     * @param {Number} index
+     *
+     */
+    remove: function(index) {
+        return this._storage.remove(index);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-removeByElement'>    /**
+</span>     * remove element
+     * @param {Object} element
+     *
+     */
+    removeByElement: function(data) {
+        return this._storage.remove(data);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-clear'>    /**
+</span>     * clear cache
+     *
+     */
+    clear: function() {
+        this._storage.clear();
+    },
+
+<span id='tupai-model-caches-QueueCache-method-get'>    /**
+</span>     * get cache by index
+     * @param {Number} index
+     *
+     */
+    get: function(index) {
+        return this._storage.get(index);
+    },
+
+<span id='tupai-model-caches-QueueCache-method-size'>    /**
+</span>     * get size of cache items
+     *
+     */
+    size: function() {
+        return this._storage.size();
+    }
+});});
+</pre>
+</body>
+</html>
