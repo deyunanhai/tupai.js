@@ -1787,11 +1787,11 @@ Package('tupai')
 .use('tupai.TransitManager')
 .define('PushStateTransitManager', function (cp) { return cp.TransitManager.extend({
     _delegate: undefined,
-    initialize : function (windowObject, rules) {
+    initialize : function (windowObject, rules, config) {
 
         this.SUPER.initialize.apply(this, arguments);
 
-        this._separator = "#!";
+        this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
         var THIS = this;
         window.addEventListener("popstate", function(jsevent) {
@@ -4711,7 +4711,7 @@ Package('tupai')
             if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
             } else {
-                this._transitManager = new cp.PushStateTransitManager(this, config.routes);
+                this._transitManager = new cp.PushStateTransitManager(this, config.routes, config.pushState);
             }
             this._transitManager.setDelegate(this);
         } else if(this._config.rootViewController) {

@@ -45,7 +45,7 @@ Package('tupai')
             if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
             } else {
-                this._transitManager = new cp.PushStateTransitManager(this, config.routes);
+                this._transitManager = new cp.PushStateTransitManager(this, config.routes, config.pushState);
             }
             this._transitManager.setDelegate(this);
         } else if(this._config.rootViewController) {

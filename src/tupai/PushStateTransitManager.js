@@ -23,11 +23,11 @@ Package('tupai')
 .use('tupai.TransitManager')
 .define('PushStateTransitManager', function (cp) { return cp.TransitManager.extend({
     _delegate: undefined,
-    initialize : function (windowObject, rules) {
+    initialize : function (windowObject, rules, config) {
 
         this.SUPER.initialize.apply(this, arguments);
 
-        this._separator = "#!";
+        this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
         var THIS = this;
         window.addEventListener("popstate", function(jsevent) {
