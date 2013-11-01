@@ -22,6 +22,8 @@ Package('tupai')
     /**
      * initialize
      * @param [config] window config
+     * @param [config.routes]
+     * @param [config.disablePushState] disable html5 history api
      * ### example with TransisManager
      *     new cp.Window({
      *         routes: {

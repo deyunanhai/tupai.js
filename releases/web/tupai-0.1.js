@@ -1762,10 +1762,26 @@ Package('tupai.ui')
         unbind: unbind
     };
 });
-/*
- * @author <a href='hu.hua@dena.jp'>胡 華</a>
- * @version 1.0
- * */
+/**
+ * @class   tupai.PushStateTransitManager
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.3
+ *
+ * html5 history api are support by this class.
+ * this class is default tansitManager.
+ * if you don't want to use html5 history api for you application
+ * you can set the window options like bellow.
+ *
+ *     new cp.Window({
+ *         routes: {
+ *             '/root'    : cp.RootViewController,
+ *             '/root/timeline': cp.TimeLineViewController
+ *         },
+ *         disablePushState: true
+ *     });
+ *
+ */
 Package('tupai')
 .use('tupai.util.HashUtil')
 .use('tupai.TransitManager')
@@ -4672,6 +4688,8 @@ Package('tupai')
     /**
      * initialize
      * @param [config] window config
+     * @param [config.routes]
+     * @param [config.disablePushState] disable html5 history api
      * ### example with TransisManager
      *     new cp.Window({
      *         routes: {
