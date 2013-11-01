@@ -16,6 +16,7 @@ Package('tupai')
 .use('tupai.TransitManager')
 .use('tupai.ui.View')
 .use('tupai.TransitManager')
+.use('tupai.PushStateTransitManager')
 .define('Window', function(cp) { return cp.View.extend({
 
     /**
@@ -39,11 +40,11 @@ Package('tupai')
 
         this._config = config || {};
         if(this._config.routes) {
-            //if(config.disablePushState || !('state' in window.history)) {
+            if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
-            /*} else {
+            } else {
                 this._transitManager = new cp.PushStateTransitManager(this, config.routes);
-            }*/
+            }
             this._transitManager.setDelegate(this);
         } else if(this._config.rootViewController) {
             this._rootViewControllerClasszz = this._config.rootViewController;
@@ -90,27 +91,28 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
-        url = url || '/root';
-        if(this._transitManager) return this.transit(url, options);
-        else if(!this._rootViewControllerClasszz) throw new Error('missing root view controller.');
+        if(this._transitManager) {
+            return this.transit(url, options, {entry: true});
+        } else if(!this._rootViewControllerClasszz) {
+            throw new Error('missing root view controller.');
+        }
 
         var controller = new this._rootViewControllerClasszz(this);
-
-        var name;
-        var pos = url.lastIndexOf('/');
-        if(pos >= 0) name = url.substring(pos+1);
-        else name = url;
-
-        controller.viewInit(options, url, name);
-        this.transitController(controller, url, options,{});
+        controller.viewInit(options, '/root', 'root');
+        this.transitController(controller, '/root', options,{});
     },
 
     transitController: function (controller, url, options, transitOptions) {
         //console.log('transit by window ' + url);
-        var view = controller.getContentView();
-        if(!view) throw new Error('cannot get contentView from ViewController');
-        this._displayView(view, transitOptions);
-        this._currentController = controller;
+        if(!controller) {
+            // show 404
+            throw new Error('can\t found controller.('+url+')');
+        } else {
+            var view = controller.getContentView();
+            if(!view) throw new Error('cannot get contentView from ViewController');
+            this._displayView(view, transitOptions);
+            this._currentController = controller;
+        }
     },
 
     getCurrentController: function() {

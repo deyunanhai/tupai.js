@@ -14,6 +14,7 @@ files = [
   'src/tupai/util/HashUtil.js',
   'src/tupai/animation/Transition.js',
   'src/tupai/TransitManager.js',
+  'src/tupai/PushStateTransitManager.js',
   'src/tupai/ui/ViewEvents.js',
   'src/tupai/util/CommonUtil.js',
   'src/tupai/events/Events.js',
