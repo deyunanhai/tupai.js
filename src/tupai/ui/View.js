@@ -89,10 +89,10 @@ Package('tupai.ui')
      * @param {Boolean} [first=true] add listener to the first of events pool
      *
      */
-    addEventListener: function(type, listener, first) {
+    on: function(type, listener, first) {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.addEventListener(type, listener, first);
+        this._events.on(type, listener, first);
     },
 
     /**
@@ -101,10 +101,10 @@ Package('tupai.ui')
      * @param {Function} listener
      *
      */
-    removeEventListener: function(type, listener) {
+    off: function(type, listener) {
 
         if(!this._events) return;
-        this._events.removeEventListener(type, listener);
+        this._events.off(type, listener);
     },
 
     /**

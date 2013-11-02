@@ -29,7 +29,7 @@ files = [
   'src/tupai/model/caches/QueueCacheDataSet.js',
   'src/tupai/model/caches/QueueCache.js',
   'src/tupai/net/HttpClient.js',
-  'src/tupai/net/JsonPClient.js',
+  'src/tupai/net/JsonpClient.js',
   'src/tupai/model/ApiManager.js',
   'src/tupai/model/CacheManager.js',
   'src/tupai/ui/TemplateEngine.js',

@@ -10,7 +10,7 @@
  *     .use('tupai.events.Events')
  *     .run(function(cp) {
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', function(e) {
+ *         events.on('hoge', function(e) {
  *             logOnBody('hoge is fired. message is ' + e.message);
  *         });
  *
@@ -28,7 +28,7 @@
  *     });}).run(function(cp) {
  *         var test = new cp.Test();
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', test);
+ *         events.on('hoge', test);
  *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
  *     });
  *
@@ -40,9 +40,6 @@
  *         initialize: function() {
  *             this.SUPER.initialize.apply(this, arguments);
  *             this._map = {};
- *         },
- *         on: function(name, cb) {
- *             this.SUPER.addEventListener.apply(this, arguments);
  *         },
  *         set: function(obj) {
  *             if(!obj) return;
@@ -133,13 +130,24 @@ Package('tupai.events')
     },
 
     /**
-     * add event listener
+     * same as on.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
      *
      */
     addEventListener: function(type, listener, first) {
+        return this.on(type, listener, first);
+    },
+
+    /**
+     * add event listener
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    on: function(type, listener, first) {
         var chain = this._events[type];
         if(!chain) {
             this._events[type] = chain = [];
@@ -152,12 +160,22 @@ Package('tupai.events')
     },
 
     /**
-     * remove listener from events pool
+     * same as off.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      *
      */
     removeEventListener: function(type, listener) {
+        return this.off(type, listener);
+    },
+
+    /**
+     * remove listener from events pool
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     *
+     */
+    off: function(type, listener) {
         var chain = this._events[type];
         if(!chain) return;
         var index;

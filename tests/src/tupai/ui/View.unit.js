@@ -74,9 +74,9 @@ test('test events',function() {
         var event = function(e) {
             ok(e.test === true, 'test parameter');
         };
-        view.addEventListener('event1', event);
+        view.on('event1', event);
         view.fire('event1', {test: true});
-        view.removeEventListener('event1', event);
+        view.off('event1', event);
         view.fire('event1', {test: true});
     });
 });

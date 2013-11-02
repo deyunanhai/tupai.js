@@ -173,13 +173,22 @@ Package('tupai')
     },
 
     /**
+     * fire application level event
+     * @param type event type
+     * @param parameter event parameter
+     */
+    fireDelegate: function(type, parameter) {
+        this._events.fireDelegate(type, parameter);
+    },
+
+    /**
      * add event listener
      * @param {String} type event type
      * @param {Object} listener event listener
      * @param {Boolean} [first] add listener to the top of event pool
      */
-    addEventListener: function(type, listener, first) {
-        this._events.addEventListener(type, listener, first);
+    on: function(type, listener, first) {
+        this._events.on(type, listener, first);
     },
 
     /**
@@ -187,8 +196,8 @@ Package('tupai')
      * @param type event type
      * @param listener which listener to remove
      */
-    removeEventListener: function(type, listener) {
-        this._events.removeEventListener(type, listener);
+    off: function(type, listener) {
+        this._events.off(type, listener);
     },
 
     /**

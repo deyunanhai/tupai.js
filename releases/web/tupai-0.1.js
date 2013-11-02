@@ -290,9 +290,6 @@
  *             this.SUPER.initialize.apply(this, arguments);
  *             this._map = {};
  *         },
- *         on: function(name, cb) {
- *             this.SUPER.addEventListener.apply(this, arguments);
- *         },
  *         set: function(obj) {
  *             if(!obj) return;
  *             for(var name in obj) {
@@ -382,6 +379,17 @@ Package('tupai.events')
     },
 
     /**
+     * same as addEventListener.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    on: function(type, listener, first) {
+        return this.addEventListener(type, listener, first);
+    },
+
+    /**
      * add event listener
      * @param {String} type eventType
      * @param {Object} listener function or class instance
@@ -398,6 +406,16 @@ Package('tupai.events')
         if(first) chain.unshift(listener);
         else chain.push(listener);
         return true;
+    },
+
+    /**
+     * same as removeEventListener.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     *
+     */
+    off: function(type, listener) {
+        return this.removeEventListener(type, listener);
     },
 
     /**
