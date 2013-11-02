@@ -146,7 +146,9 @@ Package('tupai.net')
         var queryData = this.getQueryData();
         if(queryData) {
             for (var name in queryData) {
-                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
+                var val = queryData[name];
+                if(val === undefined) continue;
+                paramStr += name + '=' + encodeURIComponent(val) + '&';
             }
         }
 

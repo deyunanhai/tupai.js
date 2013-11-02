@@ -1,6 +1,5 @@
 /*
  * TODO:
- * - uniq CacheEngine
  * - sorted CacheEngine
  * */
 
@@ -24,6 +23,7 @@ Package('tupai.model.caches')
      * @param {String} name cache name
      * @param {Object} options
      * @param {Object} [options.memCache] memory cache config
+     * @param {Object} [options.uniqField] memory cache config
      * @param {Number} [options.memCache.limit] memory cache limit
      * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
      * @param {Object} [options.localStorage] use localStorage
@@ -58,6 +58,7 @@ Package('tupai.model.caches')
             }
         }
 
+        this._uniqField = options.uniqField;
         this._delegate = delegate;
         this._name = name;
     },
@@ -131,6 +132,8 @@ Package('tupai.model.caches')
      *
      */
     push: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
         if(data instanceof Array) {
             this._storage.concat(data);
         } else {
@@ -144,11 +147,40 @@ Package('tupai.model.caches')
      *
      */
     unshift: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
+
         if(data instanceof Array) {
             this._storage.concatFirst(data);
         } else {
             this._storage.unshift(data);
         }
+    },
+
+    _removeDup: function(data) {
+
+        var newKeys = {};
+        var uniqField = this._uniqField;
+        if(data instanceof Array) {
+            var newData=[];
+            for(var i=0, n=data.length; i<n; i++) {
+                var key = data[uniqField];
+                if(!newKeys[key]) {
+                    newData.push(data);
+                }
+                newKeys[key] = true;
+            }
+            data = newData;
+        } else {
+            newKeys[data[uniqField]] = true;
+        }
+
+        this._storage.filter(function(d) {
+            var key = d[uniqField];
+            return !(newKeys[key]);
+        });
+
+        return data;
     },
 
     /**

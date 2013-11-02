@@ -68,9 +68,9 @@ Package('tupai.ui')
             return element;
         } else if(template) {
             var rootTag = 'div';
-            if(template.match(/^<(tr|th)>/)) {
+            if(template.match(/^<(tr|th)/)) {
                 rootTag = 'tbody';
-            } else if(template.match(/^<(tbody|thead)>/)) {
+            } else if(template.match(/^<(tbody|thead)/)) {
                 rootTag = 'table';
             }
             var root = document.createElement(rootTag);
@@ -91,19 +91,20 @@ Package('tupai.ui')
         if (elm.length) {
             // select
             var values = (value instanceof Array) ? value : [value];
-            Array.prototype.forEach.call(elm, function(elm) {
-                if (values.indexOf(elm.value) != -1) {
-                    elm.selected = true;
+            for(var i=0, n=elm.length; i<n; i++) {
+                var selm = elm[i];
+                if (values.indexOf(selm.value) != -1) {
+                    selm.selected = true;
                 } else {
-                    elm.selected = false;
+                    selm.selected = false;
                 }
-            });
+            }
         } else if (elm.value !== undefined) {
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
             } else {
-                elm.value = value;
+                elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
             elm.src = value;

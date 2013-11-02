@@ -798,6 +798,8 @@ Package('tupai.util')
         var set = [], key;
 
         for ( key in obj ) {
+            var val = obj[key];
+            if(val === undefined) continue;
             set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
         }
 
@@ -821,7 +823,8 @@ Package('tupai.util')
             }
             return d;
         } else {
-            return encodeURIComponent(obj);
+            if(!obj) return obj;
+            else return encodeURIComponent(obj);
         }
     }
 
@@ -1137,7 +1140,9 @@ Package('tupai.net')
         var queryData = this.getQueryData();
         if(queryData) {
             for (var name in queryData) {
-                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
+                var val = queryData[name];
+                if(val === undefined) continue;
+                paramStr += name + '=' + encodeURIComponent(val) + '&';
             }
         }
 
@@ -1608,9 +1613,9 @@ Package('tupai.ui')
             return element;
         } else if(template) {
             var rootTag = 'div';
-            if(template.match(/^<(tr|th)>/)) {
+            if(template.match(/^<(tr|th)/)) {
                 rootTag = 'tbody';
-            } else if(template.match(/^<(tbody|thead)>/)) {
+            } else if(template.match(/^<(tbody|thead)/)) {
                 rootTag = 'table';
             }
             var root = document.createElement(rootTag);
@@ -1631,19 +1636,20 @@ Package('tupai.ui')
         if (elm.length) {
             // select
             var values = (value instanceof Array) ? value : [value];
-            Array.prototype.forEach.call(elm, function(elm) {
-                if (values.indexOf(elm.value) != -1) {
-                    elm.selected = true;
+            for(var i=0, n=elm.length; i<n; i++) {
+                var selm = elm[i];
+                if (values.indexOf(selm.value) != -1) {
+                    selm.selected = true;
                 } else {
-                    elm.selected = false;
+                    selm.selected = false;
                 }
-            });
+            }
         } else if (elm.value !== undefined) {
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
             } else {
-                elm.value = value;
+                elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
             elm.src = value;
@@ -4067,6 +4073,14 @@ Package('tupai.ui')
 
     /**
      * reload this tableView
+     *
+     */
+    reload: function() {
+        return this.reloadRowsFrom(0);
+    },
+
+    /**
+     * reload this tableView
      * @param {Number} [from]
      *
      */
@@ -4078,6 +4092,10 @@ Package('tupai.ui')
         if(this._hasHeader) domFrom ++;
         if(!this._container.clearChildrenByRange(domFrom)) return;
 
+        if(!this._tableViewDelegate) {
+            console.warn('table vie delegate not set. Please set it by tableview.setTableViewDelegate');
+            return;
+        }
         if(this._tableViewDelegate.cellForRowAtTop) {
             cell = this._tableViewDelegate.cellForRowAtTop(this);
             if(cell) {
@@ -4107,7 +4125,7 @@ Package('tupai.ui')
             cell = this._tableViewDelegate.cellForRowAtBottom(this);
             cell && this._addSubView(cell);
         }
-        this._container.render();
+        this.render();
     }
 });});
 /*
@@ -4126,7 +4144,6 @@ Package('tupai.ui')
 });});
 /*
  * TODO:
- * - uniq CacheEngine
  * - sorted CacheEngine
  * */
 
@@ -4150,6 +4167,7 @@ Package('tupai.model.caches')
      * @param {String} name cache name
      * @param {Object} options
      * @param {Object} [options.memCache] memory cache config
+     * @param {Object} [options.uniqField] memory cache config
      * @param {Number} [options.memCache.limit] memory cache limit
      * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
      * @param {Object} [options.localStorage] use localStorage
@@ -4184,6 +4202,7 @@ Package('tupai.model.caches')
             }
         }
 
+        this._uniqField = options.uniqField;
         this._delegate = delegate;
         this._name = name;
     },
@@ -4257,6 +4276,8 @@ Package('tupai.model.caches')
      *
      */
     push: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
         if(data instanceof Array) {
             this._storage.concat(data);
         } else {
@@ -4270,11 +4291,40 @@ Package('tupai.model.caches')
      *
      */
     unshift: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
+
         if(data instanceof Array) {
             this._storage.concatFirst(data);
         } else {
             this._storage.unshift(data);
         }
+    },
+
+    _removeDup: function(data) {
+
+        var newKeys = {};
+        var uniqField = this._uniqField;
+        if(data instanceof Array) {
+            var newData=[];
+            for(var i=0, n=data.length; i<n; i++) {
+                var key = data[uniqField];
+                if(!newKeys[key]) {
+                    newData.push(data);
+                }
+                newKeys[key] = true;
+            }
+            data = newData;
+        } else {
+            newKeys[data[uniqField]] = true;
+        }
+
+        this._storage.filter(function(d) {
+            var key = d[uniqField];
+            return !(newKeys[key]);
+        });
+
+        return data;
     },
 
     /**

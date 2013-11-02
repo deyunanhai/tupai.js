@@ -194,12 +194,13 @@ function configDebugMode(app) {
                 res.send(content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml));
             }
         } else if(p == '/js/tupai.min.js') {
-            if(fs.existsSync(path.join(mConfig.web,'js','tupai.min.js'))) {
+            /*if(fs.existsSync(path.join(mConfig.web,'js','tupai.min.js'))) {
                 next();
-            } else {
-                var content = fs.readFileSync(path.join(webDir, 'tupai-last.min.js')).toString();
-                res.send(content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml));
-            }
+            } else {*/
+                // return unminified javascript in debug mode.
+                var content = fs.readFileSync(path.join(webDir, 'tupai-last.js')).toString();
+                res.send(content);
+            //}
         } else {
             next();
         }
@@ -253,6 +254,7 @@ function watchFs() {
     });
 
     var renderClassListHtmlFn = function(changeType) {
+        // TODO when change js file to add use will not render class list.
         if(changeType !== 'change') {
             renderClassListHtml();
         }
