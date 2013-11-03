@@ -96,6 +96,20 @@ Package('tupai.ui')
     },
 
     /**
+     * same as on.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.ui.View#on} instead.
+     *
+     */
+    addEventListener: function(type, listener, first) {
+
+        if(!this._events) this._events = new cp.Events();
+        this._events.addEventListener(type, listener, first);
+    },
+
+    /**
      * remove the listener if exists.
      * @param {String} type
      * @param {Function} listener
@@ -105,6 +119,18 @@ Package('tupai.ui')
 
         if(!this._events) return;
         this._events.off(type, listener);
+    },
+
+    /**
+     * same as off.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.ui.View#off} instead.
+     *
+     */
+    removeEventListener: function(type, listener) {
+        if(!this._events) return;
+        this._events.removeEventListener(type, listener);
     },
 
     /**

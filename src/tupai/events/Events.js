@@ -134,6 +134,7 @@ Package('tupai.events')
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.events.Events#on} instead.
      *
      */
     addEventListener: function(type, listener, first) {
@@ -163,6 +164,7 @@ Package('tupai.events')
      * same as off.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.events.Events#off} instead.
      *
      */
     removeEventListener: function(type, listener) {

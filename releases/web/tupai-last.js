@@ -259,7 +259,7 @@
  *     .use('tupai.events.Events')
  *     .run(function(cp) {
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', function(e) {
+ *         events.on('hoge', function(e) {
  *             logOnBody('hoge is fired. message is ' + e.message);
  *         });
  *
@@ -277,7 +277,7 @@
  *     });}).run(function(cp) {
  *         var test = new cp.Test();
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', test);
+ *         events.on('hoge', test);
  *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
  *     });
  *
@@ -379,14 +379,15 @@ Package('tupai.events')
     },
 
     /**
-     * same as addEventListener.
+     * same as on.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.events.Events#on} instead.
      *
      */
-    on: function(type, listener, first) {
-        return this.addEventListener(type, listener, first);
+    addEventListener: function(type, listener, first) {
+        return this.on(type, listener, first);
     },
 
     /**
@@ -396,7 +397,7 @@ Package('tupai.events')
      * @param {boolean} [first=true] add listener to the first of events pool
      *
      */
-    addEventListener: function(type, listener, first) {
+    on: function(type, listener, first) {
         var chain = this._events[type];
         if(!chain) {
             this._events[type] = chain = [];
@@ -409,13 +410,14 @@ Package('tupai.events')
     },
 
     /**
-     * same as removeEventListener.
+     * same as off.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.events.Events#off} instead.
      *
      */
-    off: function(type, listener) {
-        return this.removeEventListener(type, listener);
+    removeEventListener: function(type, listener) {
+        return this.off(type, listener);
     },
 
     /**
@@ -424,7 +426,7 @@ Package('tupai.events')
      * @param {Object} listener function or class instance
      *
      */
-    removeEventListener: function(type, listener) {
+    off: function(type, listener) {
         var chain = this._events[type];
         if(!chain) return;
         var index;
@@ -1301,8 +1303,6 @@ Package('tupai.util')
 });
 /**
  * @class   tupai.TransitManager
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @since tupai.js 0.1
  *
  * you can use this class to transit ViewController by url.
@@ -3216,6 +3216,20 @@ Package('tupai.ui')
      * @param {Boolean} [first=true] add listener to the first of events pool
      *
      */
+    on: function(type, listener, first) {
+
+        if(!this._events) this._events = new cp.Events();
+        this._events.on(type, listener, first);
+    },
+
+    /**
+     * same as on.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.ui.View#on} instead.
+     *
+     */
     addEventListener: function(type, listener, first) {
 
         if(!this._events) this._events = new cp.Events();
@@ -3228,8 +3242,20 @@ Package('tupai.ui')
      * @param {Function} listener
      *
      */
-    removeEventListener: function(type, listener) {
+    off: function(type, listener) {
 
+        if(!this._events) return;
+        this._events.off(type, listener);
+    },
+
+    /**
+     * same as off.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.ui.View#off} instead.
+     *
+     */
+    removeEventListener: function(type, listener) {
         if(!this._events) return;
         this._events.removeEventListener(type, listener);
     },
@@ -5422,10 +5448,31 @@ Package('tupai')
     },
 
     /**
+     * fire application level event
+     * @param type event type
+     * @param parameter event parameter
+     */
+    fireDelegate: function(type, parameter) {
+        this._events.fireDelegate(type, parameter);
+    },
+
+    /**
      * add event listener
      * @param {String} type event type
      * @param {Object} listener event listener
      * @param {Boolean} [first] add listener to the top of event pool
+     */
+    on: function(type, listener, first) {
+        this._events.on(type, listener, first);
+    },
+
+    /**
+     * same as on.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
+     *
      */
     addEventListener: function(type, listener, first) {
         this._events.addEventListener(type, listener, first);
@@ -5435,6 +5482,17 @@ Package('tupai')
      * remove event listener
      * @param type event type
      * @param listener which listener to remove
+     */
+    off: function(type, listener) {
+        this._events.off(type, listener);
+    },
+
+    /**
+     * same as off.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
+     *
      */
     removeEventListener: function(type, listener) {
         this._events.removeEventListener(type, listener);

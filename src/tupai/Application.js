@@ -192,12 +192,35 @@ Package('tupai')
     },
 
     /**
+     * same as on.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
+     *
+     */
+    addEventListener: function(type, listener, first) {
+        this._events.addEventListener(type, listener, first);
+    },
+
+    /**
      * remove event listener
      * @param type event type
      * @param listener which listener to remove
      */
     off: function(type, listener) {
         this._events.off(type, listener);
+    },
+
+    /**
+     * same as off.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
+     *
+     */
+    removeEventListener: function(type, listener) {
+        this._events.removeEventListener(type, listener);
     },
 
     /**
