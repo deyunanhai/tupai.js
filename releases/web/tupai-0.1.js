@@ -59,7 +59,8 @@
     }
 
     var mLoadingQueue={};
-    var mRemoteBaseUrl = '';
+    var mRemoteBaseUrl = 'js/';
+    var mGlobalUtils = undefined;
     var mAutoLoad = true;
     var mCacheEnabled = true;
     function mergeClassByClassPath(packageObj, classPath) {
@@ -149,6 +150,9 @@
             //this._packageName = packageName;
             this._packageObj = createPackage(packageName);
             this._classProvider = {};
+            if(mGlobalUtils) {
+                copy(this._classProvider, mGlobalUtils);
+            }
             this._classObject = undefined;
             this._packageName = packageName;
             this._className = undefined;
@@ -233,6 +237,13 @@
 
     global.Package = function(name){
         return new packageClass(name);
+    };
+    global.Package.setupUtil = function(name, obj) {
+
+        if(!mGlobalUtils) mGlobalUtils = {};
+        var old = mGlobalUtils[name];
+        mGlobalUtils[name] = obj;
+        return old;
     };
     global.Package.setBaseUrl = function(url) {
         mRemoteBaseUrl = url;
@@ -1303,6 +1314,8 @@ Package('tupai.util')
 });
 /**
  * @class   tupai.TransitManager
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @since tupai.js 0.1
  *
  * you can use this class to transit ViewController by url.
