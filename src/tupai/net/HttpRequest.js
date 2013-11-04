@@ -29,7 +29,7 @@ Package('tupai.net')
         cp.HashUtil.require(config, ['url']);
         this._url = config.url;
         this._headers = config.headers || {};
-        this._type = config.type || 'json';
+        this._type = config.type;
         this._method = config.method;
         this._attributes = config.attributes;
         this._noFormData = !!(!this._method || this._method.match(/get/i));

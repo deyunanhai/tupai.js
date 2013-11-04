@@ -558,6 +558,17 @@ Package('tupai.ui')
         return this;
     },
 
+    /**
+     * remove attribute value
+     * @param {String} key
+     * @return {tupai.ui.View} this view
+     *
+     */
+    removeAttribute: function(key) {
+        this._element.removeAttribute(key);
+        return this;
+    },
+
     attr: function(first, second) {
         if (second === undefined) {
             console.error('attr function is Deprecated, use getAttribute instead');

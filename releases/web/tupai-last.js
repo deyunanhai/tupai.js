@@ -1054,7 +1054,7 @@ Package('tupai.net')
         cp.HashUtil.require(config, ['url']);
         this._url = config.url;
         this._headers = config.headers || {};
-        this._type = config.type || 'json';
+        this._type = config.type;
         this._method = config.method;
         this._attributes = config.attributes;
         this._noFormData = !!(!this._method || this._method.match(/get/i));
@@ -3049,6 +3049,7 @@ Package('tupai.net')
         if(config) {
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
+            this._defaultRequestType = config.defaultRequestType;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -3091,7 +3092,7 @@ Package('tupai.net')
 
         var requestMethod = request.getMethod();
         var requestData = request.getData();
-        var requestType = request.getType();
+        var requestType = request.getType() || this._defaultRequestType;
 
         if(this._fixAjaxCache && (!requestMethod || requestMethod.toLowerCase() === 'get')) {
             var p = '__t='+(Date.now?Date.now():(+new Date()));
@@ -3695,6 +3696,17 @@ Package('tupai.ui')
      */
     setAttribute: function(key, value) {
         this._element.setAttribute(key, value);
+        return this;
+    },
+
+    /**
+     * remove attribute value
+     * @param {String} key
+     * @return {tupai.ui.View} this view
+     *
+     */
+    removeAttribute: function(key) {
+        this._element.removeAttribute(key);
         return this;
     },
 
