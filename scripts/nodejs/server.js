@@ -300,7 +300,12 @@ function watchFs() {
             }
         });
     };
-    var watcher = chokidar.watch(paths, {ignored: /\/\./, persistent: true, ignoreInitial: true});
+
+    var ignoredFn = function(path, st) {
+        if(/\/\./.test(path)) return true;
+        return false;
+    };
+    var watcher = chokidar.watch(paths, {ignored: ignoredFn, persistent: true, ignoreInitial: true});
     ['add', 'change', 'unlink'].forEach(function(changeType) {
         watcher.on(changeType, function(filePath) {
             changeFn(changeType, filePath);
