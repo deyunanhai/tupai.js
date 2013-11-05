@@ -3316,6 +3316,7 @@ Package('tupai.ui')
         this._baseViewDelete = delegate;
     },
 
+    /*
     markNeedRender: function() {
         for(var i=0,n=this._children.length;i<n;i++) {
             var child = this._children[i];
@@ -3323,6 +3324,7 @@ Package('tupai.ui')
         }
         this._rendered = false;
     },
+    */
 
     iterateChildren: function(callback) {
         for(var i=0,n=this._children.length;i<n;i++) {
@@ -3349,13 +3351,14 @@ Package('tupai.ui')
 
         if(this._rendered) return false;
 
-        var template = null;
-
         this._checkElement();
         if(this.willRender) {
             this.willRender();
         }
-        parentNode.appendChild(this._element);
+        if(!this._parentAdded) {
+            parentNode.appendChild(this._element);
+            this._parentAdded = true;
+        }
 
         this._didRender();
 
@@ -3400,8 +3403,7 @@ Package('tupai.ui')
         };
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
-                var child = this._viewIDMap[id];
-                renderView(child);
+                renderView(this._viewIDMap[id]);
             }
         }
     },
@@ -3568,8 +3570,7 @@ Package('tupai.ui')
             }
             view._element = element;
             view._parent = this;
-            view._didRender();
-            view._didLoad();
+            view._parentAdded = true;
 
             this._viewIDMap[id] = view;
         }
