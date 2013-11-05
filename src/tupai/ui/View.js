@@ -188,19 +188,31 @@ Package('tupai.ui')
         }
         parentNode.appendChild(this._element);
 
-        this._rendered = true;
+        this._didRender();
 
+        return true;
+    },
+
+    _didRender: function() {
+        this._rendered = true;
         if(this.didRender) {
             this.didRender();
         }
-
         if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
             this._baseViewDelete.viewDidRender(this);
         }
-
         this.fire('didRender');
+    },
 
-        return true;
+    _didLoad: function() {
+        if(this.didLoad) {
+            this.didLoad();
+        }
+        if(this._baseViewDelete && this._baseViewDelete.viewDidLoad) {
+            this._baseViewDelete.viewDidLoad(this);
+        }
+        this.fire('didLoad');
+        this._didLoadFlg = true;
     },
 
     _onChildrenRender: function(args) {
@@ -210,14 +222,7 @@ Package('tupai.ui')
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
             if(firsttime) {
-                if(child.didLoad) {
-                    child.didLoad();
-                }
-                if(child._baseViewDelete && child._baseViewDelete.viewDidLoad) {
-                    child._baseViewDelete.viewDidLoad(child);
-                }
-                child.fire('didLoad');
-                child._didLoadFlg = true;
+                child._didLoad();
             }
         };
         for(var i=0,n=this._children.length;i<n;i++) {
@@ -315,7 +320,12 @@ Package('tupai.ui')
      *
      */
     getData: function() {
-        return this.getTemplateParameters();
+        var data = this.getTemplateParameters();
+        if(this._element) {
+            return this._templateEngine.getBindedValue(this._element, data);
+        } else {
+            return data;
+        }
     },
 
     /**
@@ -380,10 +390,19 @@ Package('tupai.ui')
             if(!element) {
                 return undefined;
             }
-            view = this._viewIDMap[id] = new cp.View();
+            var viewClass = cp.CommonUtil.getDataSet(element, 'chView');
+            if(viewClass) {
+                var cls = Package.Class.forName(viewClass);
+                view = new cls();
+            } else {
+                view = new cp.View();
+            }
             view._element = element;
             view._parent = this;
-            view._rendered = true;
+            view._didRender();
+            view._didLoad();
+
+            this._viewIDMap[id] = view;
         }
 
         return view;
