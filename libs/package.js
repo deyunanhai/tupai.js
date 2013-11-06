@@ -59,7 +59,8 @@
     }
 
     var mLoadingQueue={};
-    var mRemoteBaseUrl = '';
+    var mRemoteBaseUrl = 'js/';
+    var mGlobalUtils = undefined;
     var mAutoLoad = true;
     var mCacheEnabled = true;
     function mergeClassByClassPath(packageObj, classPath) {
@@ -149,6 +150,9 @@
             //this._packageName = packageName;
             this._packageObj = createPackage(packageName);
             this._classProvider = {};
+            if(mGlobalUtils) {
+                copy(this._classProvider, mGlobalUtils);
+            }
             this._classObject = undefined;
             this._packageName = packageName;
             this._className = undefined;
@@ -176,23 +180,23 @@
         // define(className, callback);
         // define(callback);
         define: function(arg1, arg2) {
-            this._runQueue.push(function(THIS) {
+            this._runQueue.push(function(This) {
                 if(typeof arg1 === 'string') {
                     var className = arg1;
                     var callback = arg2;
-                    var obj = ((typeof callback !== 'function') ? callback : callback(THIS._classProvider));
-                    THIS._packageObj[className] = obj;
-                    THIS._classProvider[className] = obj;
-                    THIS._className = className;
-                    THIS._classObject = obj;
+                    var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
+                    This._packageObj[className] = obj;
+                    This._classProvider[className] = obj;
+                    This._className = className;
+                    This._classObject = obj;
                 } else {
                     var callback = arg1;
-                    if(!THIS._classObject) throw new Error('must define with name first.');
+                    if(!This._classObject) throw new Error('must define with name first.');
                     var obj = ((typeof callback !== 'function') ?
                                callback :
-                               callback.apply(THIS._classObject, [THIS._classProvider]));
+                               callback.apply(This._classObject, [This._classProvider]));
                     if(obj) {
-                        copy(THIS._classObject, obj, true);
+                        copy(This._classObject, obj, true);
                     }
                 }
             });
@@ -200,9 +204,9 @@
             return this;
         },
         run: function(callback) {
-            this._runQueue.push(function(THIS) {
+            this._runQueue.push(function(This) {
                 if(typeof callback !== 'function') throw Error();
-                callback(THIS._classProvider);
+                callback(This._classProvider);
             });
             this.checkAndRun();
             return this;
@@ -233,6 +237,13 @@
 
     global.Package = function(name){
         return new packageClass(name);
+    };
+    global.Package.setupUtil = function(name, obj) {
+
+        if(!mGlobalUtils) mGlobalUtils = {};
+        var old = mGlobalUtils[name];
+        mGlobalUtils[name] = obj;
+        return old;
     };
     global.Package.setBaseUrl = function(url) {
         mRemoteBaseUrl = url;

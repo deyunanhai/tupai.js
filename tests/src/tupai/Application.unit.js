@@ -141,10 +141,10 @@ test('events',function() {
         var event = function(e) {
             ok(e.data === 'data');
         };
-        app.addEventListener('event1', event);
+        app.on('event1', event);
 
         app.fire('event1', {data: 'data'});
-        app.removeEventListener('event1', event);
+        app.off('event1', event);
         app.fire('event1', {data: 'data'});
     });
 });

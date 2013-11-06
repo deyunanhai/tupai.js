@@ -25,6 +25,7 @@ Package('test.transit')
 Package('test.transit')
 .define('MockWindow', function(cp) { return Package.Class.extend({
     transitController: function(controller, url, options, transitOptions) {
+        if(!controller) ok(false);
         ok(url === '/root' || url === '/sub', 'transit by window');
     }
 });});
@@ -75,3 +76,34 @@ test('transit by cached RootViewController',function() {
     });
 });
 
+test('transit by cached RootViewController 1',function() {
+
+    Package('test2.transit')
+    .use('tupai.ViewController')
+    .use('tupai.ui.View')
+    .define('RootViewController', function(cp) { return cp.ViewController.extend({
+        viewInit: function(options, url, name) {
+            this.setContentView(new cp.View());
+        },
+        transitController: function(controller, url, options, transitOptions) {
+        }
+    });});
+
+    Package()
+    .use('tupai.TransitManager')
+    .use('test2.transit.RootViewController')
+    .use('test.transit.SubViewController')
+    .use('test.transit.MockWindow')
+    .run(function(cp) {
+        var win = new cp.MockWindow();
+        var tsManager = new cp.TransitManager(win, {
+            '/root': cp.RootViewController,
+            '/sub': cp.SubViewController,
+            '/root/sub1': cp.SubViewController,
+            '/root/sub2': cp.SubViewController
+        });
+
+        tsManager.transit('/root/aa');
+    });
+    ok(true);
+});

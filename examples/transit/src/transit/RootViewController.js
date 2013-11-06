@@ -31,7 +31,7 @@ Package('transit')
             THIS._window.transit('/root/sub2');
         });
         btnDetail.bind('click', function() {
-            THIS._window.transitWithHistory('/detail1');
+            THIS._window.transitWithHistory('/detail1', {p1:'root'});
         });
     },
     viewDidLoad: function() {

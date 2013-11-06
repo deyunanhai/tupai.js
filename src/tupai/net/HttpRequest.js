@@ -29,7 +29,7 @@ Package('tupai.net')
         cp.HashUtil.require(config, ['url']);
         this._url = config.url;
         this._headers = config.headers || {};
-        this._type = config.type || 'json';
+        this._type = config.type;
         this._method = config.method;
         this._attributes = config.attributes;
         this._noFormData = !!(!this._method || this._method.match(/get/i));
@@ -146,7 +146,9 @@ Package('tupai.net')
         var queryData = this.getQueryData();
         if(queryData) {
             for (var name in queryData) {
-                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
+                var val = queryData[name];
+                if(val === undefined) continue;
+                paramStr += name + '=' + encodeURIComponent(val) + '&';
             }
         }
 

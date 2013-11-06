@@ -33,7 +33,6 @@ function compileConfigSync(input, output, fullClassName, options) {
         }
     });
 
-
     var tempStr =
 'Package(\'%s\')\n\
 .define(\'%s\', function(cp) {\n\

@@ -46,6 +46,8 @@ Package('tupai.util')
         var set = [], key;
 
         for ( key in obj ) {
+            var val = obj[key];
+            if(val === undefined) continue;
             set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
         }
 
@@ -69,7 +71,8 @@ Package('tupai.util')
             }
             return d;
         } else {
-            return encodeURIComponent(obj);
+            if(!obj) return obj;
+            else return encodeURIComponent(obj);
         }
     }
 

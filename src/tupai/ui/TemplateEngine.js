@@ -42,20 +42,26 @@ Package('tupai.ui')
 .use('tupai.util.HashUtil')
 .define('TemplateEngine', function(cp) {
 
-    var bindToElement = function(tarElement, data) {
+    var loopChName = function(tarElement, cb) {
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i<len; ++i) {
-            var elm = elements[i];
+            var child = elements[i];
             var name = cp.CommonUtil.getDataSet(elements[i], 'chName');
 
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(elm, value);
+            cb(name, child, tarElement);
         }
         var name = cp.CommonUtil.getDataSet(tarElement, 'chName');
         if(name) {
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(tarElement, value);
+            cb(name, tarElement, tarElement);
         }
+    };
+
+    var bindToElement = function(tarElement, data) {
+
+        loopChName(tarElement, function(name, child) {
+            var value = cp.HashUtil.getValueByName(name, data);
+            setValue(child, value);
+        });
     };
 
     /**
@@ -68,9 +74,9 @@ Package('tupai.ui')
             return element;
         } else if(template) {
             var rootTag = 'div';
-            if(template.match(/^<(tr|th)>/)) {
+            if(template.match(/^<(tr|th)/)) {
                 rootTag = 'tbody';
-            } else if(template.match(/^<(tbody|thead)>/)) {
+            } else if(template.match(/^<(tbody|thead)/)) {
                 rootTag = 'table';
             }
             var root = document.createElement(rootTag);
@@ -83,6 +89,15 @@ Package('tupai.ui')
         }
     };
 
+    var getBindedValue = function(tarElement, data) {
+        data = data || {};
+        loopChName(tarElement, function(name, child) {
+            var value = getValue(child);
+            data[name] = value;
+        });
+        return data;
+    };
+
     /**
      * set element value
      *
@@ -91,22 +106,30 @@ Package('tupai.ui')
         if (elm.length) {
             // select
             var values = (value instanceof Array) ? value : [value];
-            Array.prototype.forEach.call(elm, function(elm) {
-                if (values.indexOf(elm.value) != -1) {
-                    elm.selected = true;
+            for(var i=0, n=elm.length; i<n; i++) {
+                var selm = elm[i];
+                if (values.indexOf(selm.value) != -1) {
+                    selm.selected = true;
                 } else {
-                    elm.selected = false;
+                    selm.selected = false;
                 }
-            });
+            }
         } else if (elm.value !== undefined) {
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
             } else {
-                elm.value = value;
+                elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
             elm.src = value;
+        } else if(elm.tagName === 'A') {
+            if(typeof value === 'object') {
+                elm.innerHTML = value.value;
+                elm.href = value.href;
+            } else {
+                elm.innerHTML = value;
+            }
         } else {
             // other
             if(value === undefined) {
@@ -146,6 +169,11 @@ Package('tupai.ui')
             }
         } else if (elm.src !== undefined) {
             return elm.src;
+        } else if(elm.tagName === 'A') {
+            return {
+                href: elm.getAttribute('href'),
+                value: elm.innerHTML
+            }
         } else {
             return elm.innerHTML;
         }
@@ -155,6 +183,7 @@ Package('tupai.ui')
 
     return {
         createElement: createElement,
+        getBindedValue: getBindedValue,
         setValue: setValue,
         getValue: getValue
     };

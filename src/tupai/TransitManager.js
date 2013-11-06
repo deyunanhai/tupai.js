@@ -70,7 +70,7 @@ Package('tupai')
                 return controllerRef.instance;
             }
         }
-        throw 'could not find ' + url;
+        return undefined;
     },
     size: function() {
         return this._history.length;
@@ -176,7 +176,7 @@ Package('tupai')
         }
 
         var n = currentRoute.length > route.length ? route.length : currentRoute.length;
-        if (n == 0) {
+        if (n === 0) {
             return null;
         }
 
@@ -207,6 +207,7 @@ Package('tupai')
      * @param {Object} [transitOptions]
      */
     transit: function (url, options, transitOptions) {
+        url = url || '/root';
         return this._transit(url, options, transitOptions);
     },
     _transit: function (url, options, transitOptions) {
@@ -241,9 +242,13 @@ Package('tupai')
             var controllerUrl = rootUrl + '/' + r;
             var controller = this._getController(controllerUrl);
 
-            if (controller.viewInit) controller.viewInit(options, url, r);
+            if(controller) {
+                (controller.viewInit && controller.viewInit(options, url, r));
+            }
             if(!rootController.transitController) throw new Error('root controller must have transitController delegate function. ' + url);
             rootController.transitController(controller, controllerUrl, options, transitOptions);
+
+            if(!controller) break;
             rootController = controller;
             rootUrl = controllerUrl;
         }

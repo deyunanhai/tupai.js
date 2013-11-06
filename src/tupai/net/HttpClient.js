@@ -80,6 +80,7 @@ Package('tupai.net')
         if(config) {
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
+            this._defaultRequestType = config.defaultRequestType;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -122,7 +123,7 @@ Package('tupai.net')
 
         var requestMethod = request.getMethod();
         var requestData = request.getData();
-        var requestType = request.getType();
+        var requestType = request.getType() || this._defaultRequestType;
 
         if(this._fixAjaxCache && (!requestMethod || requestMethod.toLowerCase() === 'get')) {
             var p = '__t='+(Date.now?Date.now():(+new Date()));

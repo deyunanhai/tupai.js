@@ -15,11 +15,12 @@ Package('transit')
         view.setDelegate(this);
         this.setContentView(view);
 
+        var p1 = options && options['p1'];
         var THIS = this;
         var btnDetail2 = view.findViewById('btnDetail2');
         if(btnDetail2) {
             btnDetail2.bind('click', function() {
-                THIS._window.transitWithHistory('/detail2');
+                THIS._window.transitWithHistory('/detail2', {p1:p1, p2:'detail'});
             });
         }
         var btnBackRoot = view.findViewById('btnBackRoot');

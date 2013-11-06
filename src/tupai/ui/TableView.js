@@ -155,6 +155,14 @@ Package('tupai.ui')
 
     /**
      * reload this tableView
+     *
+     */
+    reload: function() {
+        return this.reloadRowsFrom(0);
+    },
+
+    /**
+     * reload this tableView
      * @param {Number} [from]
      *
      */
@@ -166,6 +174,10 @@ Package('tupai.ui')
         if(this._hasHeader) domFrom ++;
         if(!this._container.clearChildrenByRange(domFrom)) return;
 
+        if(!this._tableViewDelegate) {
+            console.warn('table vie delegate not set. Please set it by tableview.setTableViewDelegate');
+            return;
+        }
         if(this._tableViewDelegate.cellForRowAtTop) {
             cell = this._tableViewDelegate.cellForRowAtTop(this);
             if(cell) {
@@ -195,6 +207,6 @@ Package('tupai.ui')
             cell = this._tableViewDelegate.cellForRowAtBottom(this);
             cell && this._addSubView(cell);
         }
-        this._container.render();
+        this.render();
     }
 });});
