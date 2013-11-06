@@ -164,9 +164,10 @@ Package('tupai.model.caches')
         if(data instanceof Array) {
             var newData=[];
             for(var i=0, n=data.length; i<n; i++) {
-                var key = data[uniqField];
+                var r = data[i];
+                var key = r[uniqField];
                 if(!newKeys[key]) {
-                    newData.push(data);
+                    newData.push(r);
                 }
                 newKeys[key] = true;
             }
