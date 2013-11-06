@@ -3347,6 +3347,7 @@ Package('tupai.ui')
 
         this._onChildrenRender(args);
     },
+
     _onHTMLRender: function(parentNode, args) {
 
         if(this._rendered) return false;
@@ -3389,12 +3390,10 @@ Package('tupai.ui')
 
     _onChildrenRender: function(args) {
 
-        var containerNode = this._getContainerNode();
+        var containerNode = this._element;
         var renderView = function(child) {
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
-            console.log(child);
-            console.log(child._viewIDMap);
             if(child._viewIDMap) {
                 for(var id in child._viewIDMap) {
                     renderView(child._viewIDMap[id]);
@@ -3408,9 +3407,6 @@ Package('tupai.ui')
             var child = this._children[i];
             renderView(child);
         };
-    },
-    _getContainerNode: function() {
-        return this._element;
     },
 
     /**
@@ -3441,18 +3437,29 @@ Package('tupai.ui')
             return this._templateParameters;
         }
     },
-    _createElementsIDMap: function() {
-        if(this._elementsIDMap) return;
+    _createViewIDMap: function() {
+        if(this._viewIDMap) return;
 
-        var elementsIDMap = {};
-        this._elementsIDMap = elementsIDMap;
-
+        var viewIDMap = {};
         var elements = this._element.querySelectorAll('*[data-ch-id]');
         for (var i=0,len=elements.length; i<len; ++i) {
             var elm = elements[i];
             var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
-            elementsIDMap[id] = elm;
+            var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
+            var view;
+            if(viewClsNm) {
+                var cls = Package.Class.forName(viewClsNm);
+                view = new cls();
+            } else {
+                view = new cp.View();
+            }
+            view._element = elm;
+            view._parent = this;
+            view._parentAdded = true;
+
+            viewIDMap[id] = view;
         }
+        this._viewIDMap = viewIDMap;
     },
     _checkElement: function() {
         if(this._element) return;
@@ -3462,7 +3469,7 @@ Package('tupai.ui')
         this._element = this._templateEngine.createElement(undefined, template, data);
         if(!this._element) throw new Error('cannot create element');
 
-        this._createElementsIDMap();
+        this._createViewIDMap();
     },
 
     /**
@@ -3555,51 +3562,7 @@ Package('tupai.ui')
     findViewById: function(id) {
 
         this._checkElement();
-        if(!this._viewIDMap) this._viewIDMap = {};
-
-        var view = this._viewIDMap[id];
-        if(view === undefined) {
-            var element = this._elementsIDMap[id];
-            if(!element) {
-                return undefined;
-            }
-            var viewClass = cp.CommonUtil.getDataSet(element, 'chView');
-            if(viewClass) {
-                var cls = Package.Class.forName(viewClass);
-                view = new cls();
-            } else {
-                view = new cp.View();
-            }
-            view._element = element;
-            view._parent = this;
-            view._parentAdded = true;
-
-            this._viewIDMap[id] = view;
-        }
-
-        return view;
-    },
-    _onRemoveChildren: function() {
-        for(var i=0,n=this._children.length;i<n;i++) {
-            var c = this._children[i];
-            this._removeChild(c);
-        }
-    },
-    _removeChild: function(child) {
-
-        child._onRemoveChildren();
-
-        child._parent = null;
-        child._rendered = false;
-        child._events = null;
-        child._element.parentNode.removeChild(child._element);
-        if(child.didUnload) {
-            child.didUnload();
-        }
-        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
-        }
-        child.fire('didUnload');
+        return this._viewIDMap[id];
     },
 
     /**
@@ -3622,6 +3585,7 @@ Package('tupai.ui')
                 var child = this._viewIDMap[id];
                 this._removeChild(child);
             }
+            this._viewIDMap = {};
         }
         return this.clearChildrenByRange(0);
     },
@@ -3678,7 +3642,22 @@ Package('tupai.ui')
      *
      */
     removeChild: function(child) {
-        return this.removeChildAt(this._children.indexOf(child));
+
+        if(!child) return child;
+
+        var index = this._children.indexOf(child);
+        if(index < 0) {
+            for(var id in this._viewIDMap) {
+                if(this._viewIDMap[id] === child) {
+                    this._removeChild(child);
+                    delete this._viewIDMap[id];
+                    return child;
+                }
+            }
+            return null;
+        } else {
+            return this.removeChildAt(this._children.indexOf(child));
+        }
     },
 
     /**
@@ -3697,7 +3676,22 @@ Package('tupai.ui')
 
         child = child[0];
         this._removeChild(child);
+
         return child;
+    },
+
+    _removeChild: function(child) {
+        child._parent = null;
+        child._rendered = false;
+        child._events = null;
+        child._element.parentNode.removeChild(child._element);
+        if(child.didUnload) {
+            child.didUnload();
+        }
+        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
+            child._baseViewDelete.viewDidUnload(child);
+        }
+        child.fire('didUnload');
     },
 
     /**

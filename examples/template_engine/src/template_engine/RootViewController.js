@@ -13,6 +13,7 @@ Package('template_engine')
     viewDidLoad: function (view) {
         this.SUPER.viewDidLoad.apply(this, arguments);
 
+        console.log('viewDidLoad');
         this.getContentView().setData({
             text: 'text',
             input: 'input',
@@ -29,9 +30,14 @@ Package('template_engine')
         this.findViewById('btn').bind('click', function() {
             console.log(This.getContentView().getData());
         });
+
+        this.findViewById('clear').bind('click', function() {
+            This.getWindow().clearChildren();
+        });
     },
     viewDidUnload: function (view) {
         this.SUPER.viewDidUnload.apply(this, arguments);
+        console.log('viewDidUnload');
     },
     /* call from transisManager */
     transitController: function (controller, url, options, transitOptions) {

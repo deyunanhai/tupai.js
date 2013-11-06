@@ -8,6 +8,6 @@ Package('template_engine')
         console.log('did render');
     },
     didUnload: function() {
-        console.log('did load');
+        console.log('did unload');
     }
 });});
