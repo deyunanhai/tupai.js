@@ -59,8 +59,7 @@
     }
 
     var mLoadingQueue={};
-    var mRemoteBaseUrl = 'js/';
-    var mGlobalUtils = undefined;
+    var mRemoteBaseUrl = '';
     var mAutoLoad = true;
     var mCacheEnabled = true;
     function mergeClassByClassPath(packageObj, classPath) {
@@ -150,9 +149,6 @@
             //this._packageName = packageName;
             this._packageObj = createPackage(packageName);
             this._classProvider = {};
-            if(mGlobalUtils) {
-                copy(this._classProvider, mGlobalUtils);
-            }
             this._classObject = undefined;
             this._packageName = packageName;
             this._className = undefined;
@@ -180,23 +176,23 @@
         // define(className, callback);
         // define(callback);
         define: function(arg1, arg2) {
-            this._runQueue.push(function(This) {
+            this._runQueue.push(function(THIS) {
                 if(typeof arg1 === 'string') {
                     var className = arg1;
                     var callback = arg2;
-                    var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
-                    This._packageObj[className] = obj;
-                    This._classProvider[className] = obj;
-                    This._className = className;
-                    This._classObject = obj;
+                    var obj = ((typeof callback !== 'function') ? callback : callback(THIS._classProvider));
+                    THIS._packageObj[className] = obj;
+                    THIS._classProvider[className] = obj;
+                    THIS._className = className;
+                    THIS._classObject = obj;
                 } else {
                     var callback = arg1;
-                    if(!This._classObject) throw new Error('must define with name first.');
+                    if(!THIS._classObject) throw new Error('must define with name first.');
                     var obj = ((typeof callback !== 'function') ?
                                callback :
-                               callback.apply(This._classObject, [This._classProvider]));
+                               callback.apply(THIS._classObject, [THIS._classProvider]));
                     if(obj) {
-                        copy(This._classObject, obj, true);
+                        copy(THIS._classObject, obj, true);
                     }
                 }
             });
@@ -204,9 +200,9 @@
             return this;
         },
         run: function(callback) {
-            this._runQueue.push(function(This) {
+            this._runQueue.push(function(THIS) {
                 if(typeof callback !== 'function') throw Error();
-                callback(This._classProvider);
+                callback(THIS._classProvider);
             });
             this.checkAndRun();
             return this;
@@ -238,13 +234,6 @@
     global.Package = function(name){
         return new packageClass(name);
     };
-    global.Package.setupUtil = function(name, obj) {
-
-        if(!mGlobalUtils) mGlobalUtils = {};
-        var old = mGlobalUtils[name];
-        mGlobalUtils[name] = obj;
-        return old;
-    };
     global.Package.setBaseUrl = function(url) {
         mRemoteBaseUrl = url;
     };
@@ -270,7 +259,7 @@
  *     .use('tupai.events.Events')
  *     .run(function(cp) {
  *         var events = new cp.Events();
- *         events.on('hoge', function(e) {
+ *         events.addEventListener('hoge', function(e) {
  *             logOnBody('hoge is fired. message is ' + e.message);
  *         });
  *
@@ -288,7 +277,7 @@
  *     });}).run(function(cp) {
  *         var test = new cp.Test();
  *         var events = new cp.Events();
- *         events.on('hoge', test);
+ *         events.addEventListener('hoge', test);
  *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
  *     });
  *
@@ -300,6 +289,9 @@
  *         initialize: function() {
  *             this.SUPER.initialize.apply(this, arguments);
  *             this._map = {};
+ *         },
+ *         on: function(name, cb) {
+ *             this.SUPER.addEventListener.apply(this, arguments);
  *         },
  *         set: function(obj) {
  *             if(!obj) return;
@@ -390,25 +382,13 @@ Package('tupai.events')
     },
 
     /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.events.Events#on} instead.
-     *
-     */
-    addEventListener: function(type, listener, first) {
-        return this.on(type, listener, first);
-    },
-
-    /**
      * add event listener
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
      *
      */
-    on: function(type, listener, first) {
+    addEventListener: function(type, listener, first) {
         var chain = this._events[type];
         if(!chain) {
             this._events[type] = chain = [];
@@ -421,23 +401,12 @@ Package('tupai.events')
     },
 
     /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.events.Events#off} instead.
-     *
-     */
-    removeEventListener: function(type, listener) {
-        return this.off(type, listener);
-    },
-
-    /**
      * remove listener from events pool
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      *
      */
-    off: function(type, listener) {
+    removeEventListener: function(type, listener) {
         var chain = this._events[type];
         if(!chain) return;
         var index;
@@ -829,8 +798,6 @@ Package('tupai.util')
         var set = [], key;
 
         for ( key in obj ) {
-            var val = obj[key];
-            if(val === undefined) continue;
             set.push(encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]));
         }
 
@@ -854,8 +821,7 @@ Package('tupai.util')
             }
             return d;
         } else {
-            if(!obj) return obj;
-            else return encodeURIComponent(obj);
+            return encodeURIComponent(obj);
         }
     }
 
@@ -1054,7 +1020,7 @@ Package('tupai.net')
         cp.HashUtil.require(config, ['url']);
         this._url = config.url;
         this._headers = config.headers || {};
-        this._type = config.type;
+        this._type = config.type || 'json';
         this._method = config.method;
         this._attributes = config.attributes;
         this._noFormData = !!(!this._method || this._method.match(/get/i));
@@ -1171,9 +1137,7 @@ Package('tupai.net')
         var queryData = this.getQueryData();
         if(queryData) {
             for (var name in queryData) {
-                var val = queryData[name];
-                if(val === undefined) continue;
-                paramStr += name + '=' + encodeURIComponent(val) + '&';
+                paramStr += name + '=' + encodeURIComponent(queryData[name]) + '&';
             }
         }
 
@@ -1384,7 +1348,7 @@ Package('tupai')
                 return controllerRef.instance;
             }
         }
-        return undefined;
+        throw 'could not find ' + url;
     },
     size: function() {
         return this._history.length;
@@ -1490,7 +1454,7 @@ Package('tupai')
         }
 
         var n = currentRoute.length > route.length ? route.length : currentRoute.length;
-        if (n === 0) {
+        if (n == 0) {
             return null;
         }
 
@@ -1521,7 +1485,6 @@ Package('tupai')
      * @param {Object} [transitOptions]
      */
     transit: function (url, options, transitOptions) {
-        url = url || '/root';
         return this._transit(url, options, transitOptions);
     },
     _transit: function (url, options, transitOptions) {
@@ -1556,13 +1519,9 @@ Package('tupai')
             var controllerUrl = rootUrl + '/' + r;
             var controller = this._getController(controllerUrl);
 
-            if(controller) {
-                (controller.viewInit && controller.viewInit(options, url, r));
-            }
+            if (controller.viewInit) controller.viewInit(options, url, r);
             if(!rootController.transitController) throw new Error('root controller must have transitController delegate function. ' + url);
             rootController.transitController(controller, controllerUrl, options, transitOptions);
-
-            if(!controller) break;
             rootController = controller;
             rootUrl = controllerUrl;
         }
@@ -1618,26 +1577,20 @@ Package('tupai.ui')
 .use('tupai.util.HashUtil')
 .define('TemplateEngine', function(cp) {
 
-    var loopChName = function(tarElement, cb) {
+    var bindToElement = function(tarElement, data) {
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i<len; ++i) {
-            var child = elements[i];
+            var elm = elements[i];
             var name = cp.CommonUtil.getDataSet(elements[i], 'chName');
 
-            cb(name, child, tarElement);
+            var value = cp.HashUtil.getValueByName(name, data);
+            setValue(elm, value);
         }
         var name = cp.CommonUtil.getDataSet(tarElement, 'chName');
         if(name) {
-            cb(name, tarElement, tarElement);
-        }
-    };
-
-    var bindToElement = function(tarElement, data) {
-
-        loopChName(tarElement, function(name, child) {
             var value = cp.HashUtil.getValueByName(name, data);
-            setValue(child, value);
-        });
+            setValue(tarElement, value);
+        }
     };
 
     /**
@@ -1650,9 +1603,9 @@ Package('tupai.ui')
             return element;
         } else if(template) {
             var rootTag = 'div';
-            if(template.match(/^<(tr|th)/)) {
+            if(template.match(/^<(tr|th)>/)) {
                 rootTag = 'tbody';
-            } else if(template.match(/^<(tbody|thead)/)) {
+            } else if(template.match(/^<(tbody|thead)>/)) {
                 rootTag = 'table';
             }
             var root = document.createElement(rootTag);
@@ -1665,15 +1618,6 @@ Package('tupai.ui')
         }
     };
 
-    var getBindedValue = function(tarElement, data) {
-        data = data || {};
-        loopChName(tarElement, function(name, child) {
-            var value = getValue(child);
-            data[name] = value;
-        });
-        return data;
-    };
-
     /**
      * set element value
      *
@@ -1682,30 +1626,22 @@ Package('tupai.ui')
         if (elm.length) {
             // select
             var values = (value instanceof Array) ? value : [value];
-            for(var i=0, n=elm.length; i<n; i++) {
-                var selm = elm[i];
-                if (values.indexOf(selm.value) != -1) {
-                    selm.selected = true;
+            Array.prototype.forEach.call(elm, function(elm) {
+                if (values.indexOf(elm.value) != -1) {
+                    elm.selected = true;
                 } else {
-                    selm.selected = false;
+                    elm.selected = false;
                 }
-            }
+            });
         } else if (elm.value !== undefined) {
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
             } else {
-                elm.value = ((value===undefined)?'':value);
+                elm.value = value;
             }
         } else if(elm.src !== undefined) {
             elm.src = value;
-        } else if(elm.tagName === 'A') {
-            if(typeof value === 'object') {
-                elm.innerHTML = value.value;
-                elm.href = value.href;
-            } else {
-                elm.innerHTML = value;
-            }
         } else {
             // other
             if(value === undefined) {
@@ -1745,11 +1681,6 @@ Package('tupai.ui')
             }
         } else if (elm.src !== undefined) {
             return elm.src;
-        } else if(elm.tagName === 'A') {
-            return {
-                href: elm.getAttribute('href'),
-                value: elm.innerHTML
-            }
         } else {
             return elm.innerHTML;
         }
@@ -1759,7 +1690,6 @@ Package('tupai.ui')
 
     return {
         createElement: createElement,
-        getBindedValue: getBindedValue,
         setValue: setValue,
         getValue: getValue
     };
@@ -1827,166 +1757,6 @@ Package('tupai.ui')
         unbind: unbind
     };
 });
-/**
- * @class   tupai.PushStateTransitManager
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.3
- *
- * html5 history api are support by this class.
- * this class is default tansitManager.
- * if you don't want to use html5 history api for you application
- * you can set the window options like bellow.
- *
- *     new cp.Window({
- *         routes: {
- *             '/root'    : cp.RootViewController,
- *             '/root/timeline': cp.TimeLineViewController
- *         },
- *         disablePushState: true
- *     });
- *
- */
-Package('tupai')
-.use('tupai.util.HashUtil')
-.use('tupai.TransitManager')
-.define('PushStateTransitManager', function (cp) { return cp.TransitManager.extend({
-    _delegate: undefined,
-    initialize : function (windowObject, rules, config) {
-
-        this.SUPER.initialize.apply(this, arguments);
-
-        this._separator = (config && config.separator) || "#!";
-        var initialURL = location.href;
-        var THIS = this;
-        window.addEventListener("popstate", function(jsevent) {
-            if(this._stopPopStateEventStatus) return;
-            //console.log(jsevent);
-            var state = jsevent.state;
-            if(!state) return;
-            var url = state.url;
-            if(!url) return;
-
-            THIS._transit(
-                url,
-                state.options,
-                state.transitOptions);
-        });
-    },
-    _enterStopPopStateEvent: function() {
-        if(!this._stopPopStateEventStatus) {
-            this._stopPopStateEventStatus = 1;
-        } else {
-            this._stopPopStateEventStatus++;
-        }
-        //console.log("_entry " + this._stopPopStateEventStatus);
-    },
-    _exitStopPopStateEvent: function() {
-        //console.log("_exit");
-        if(this._stopPopStateEventStatus) this._stopPopStateEventStatus--;
-    },
-    _removeUntil: function(targetUrl) {
-        if(!targetUrl) return;
-        var index = this.lastIndexOf(targetUrl);
-        if(index < 0) return;
-        var bi = this.size() - index;
-        var prev = this.SUPER._removeUntil.apply(this, arguments);
-
-        this._enterStopPopStateEvent();
-        window.history.go(bi*-1);
-        // this can clear forward history. but will push two same state ........
-        //window.history.pushState("","","");
-        this._exitStopPopStateEvent();
-
-        return prev;
-    },
-    back: function (targetUrl, transitOptions) {
-        var ret = this.SUPER.back.apply(this, arguments);
-        if(ret) {
-            this._enterStopPopStateEvent();
-            window.history.replaceState(
-                this._current, "",
-                this._createUrl(this._current.url, this._current.options)
-            );
-            this._exitStopPopStateEvent();
-        }
-    },
-    transitWithHistory: function (url, options, transitOptions) {
-        var result = this.SUPER.transitWithHistory.apply(this, arguments);
-        if(result) {
-            window.history.pushState({
-                url:url,
-                options:options,
-                transitOptions: transitOptions
-            }, "", this._createUrl(url, options));
-        }
-        return result;
-    },
-    _createOptionsFromStr: function(paramsStr, options) {
-
-        if(!paramsStr) return options;
-        var pairs = paramsStr.split('&');
-        options = options || {};
-        for(var i=0, n=pairs.length; i<n; i++) {
-            var c = pairs[i].split('=');
-            options[c[0]] = decodeURIComponent(c[1]);
-        }
-        return options;
-    },
-    _createQueryString: function(options) {
-
-        var qs = '';
-        if(typeof options !== 'object') return qs;
-        for(var name in options) {
-            var val = options[name];
-            qs += '&' + name + '=' + encodeURIComponent(val);
-        }
-        if(qs.length > 0) qs = qs.substring(1);
-        return qs;
-    },
-    _createUrl: function(url, options) {
-
-        var qs = this._createQueryString(options);
-        if(qs.length > 0) {
-            if(url.indexOf('?') < 0) url += '?';
-            url += qs;
-        }
-        return this._separator + url;
-    },
-    transit: function (url, options, transitOptions) {
-        if(transitOptions && transitOptions.entry) {
-            // entry point
-
-            var escapeRegExp = function (string) {
-                return string.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1");
-            };
-            var entryUrl;
-            var regexp = new RegExp("^(.*)"+escapeRegExp(this._separator)+"(.*)");
-            var matches = (window.location.href+'').match(regexp);
-            if(matches) {
-                entryUrl = matches[2];
-            }
-
-            if(entryUrl) {
-                options = {};
-                matches = entryUrl.match(/^(.*)\?(.*)$/);
-                if(matches) {
-                    entryUrl = matches[1];
-                    var params = matches[2];
-                    options = this._createOptionsFromStr(params, options);
-                }
-
-                url = entryUrl;
-                Array.prototype.slice.call(arguments).splice(0, 2, entryUrl, options);
-            }
-        }
-        var result = this.SUPER.transit.apply(this, arguments);
-        if(result) {
-            window.history.replaceState(this._current, "", this._createUrl(url, options));
-        }
-        return result;
-    }
-});});
 /*
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @version 1.0
@@ -3077,7 +2847,6 @@ Package('tupai.net')
         if(config) {
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
-            this._defaultRequestType = config.defaultRequestType;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -3120,7 +2889,7 @@ Package('tupai.net')
 
         var requestMethod = request.getMethod();
         var requestData = request.getData();
-        var requestType = request.getType() || this._defaultRequestType;
+        var requestType = request.getType();
 
         if(this._fixAjaxCache && (!requestMethod || requestMethod.toLowerCase() === 'get')) {
             var p = '__t='+(Date.now?Date.now():(+new Date()));
@@ -3258,20 +3027,6 @@ Package('tupai.ui')
      * @param {Boolean} [first=true] add listener to the first of events pool
      *
      */
-    on: function(type, listener, first) {
-
-        if(!this._events) this._events = new cp.Events();
-        this._events.on(type, listener, first);
-    },
-
-    /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.ui.View#on} instead.
-     *
-     */
     addEventListener: function(type, listener, first) {
 
         if(!this._events) this._events = new cp.Events();
@@ -3284,20 +3039,8 @@ Package('tupai.ui')
      * @param {Function} listener
      *
      */
-    off: function(type, listener) {
-
-        if(!this._events) return;
-        this._events.off(type, listener);
-    },
-
-    /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.ui.View#off} instead.
-     *
-     */
     removeEventListener: function(type, listener) {
+
         if(!this._events) return;
         this._events.removeEventListener(type, listener);
     },
@@ -3316,7 +3059,6 @@ Package('tupai.ui')
         this._baseViewDelete = delegate;
     },
 
-    /*
     markNeedRender: function() {
         for(var i=0,n=this._children.length;i<n;i++) {
             var child = this._children[i];
@@ -3324,7 +3066,6 @@ Package('tupai.ui')
         }
         this._rendered = false;
     },
-    */
 
     iterateChildren: function(callback) {
         for(var i=0,n=this._children.length;i<n;i++) {
@@ -3347,66 +3088,63 @@ Package('tupai.ui')
 
         this._onChildrenRender(args);
     },
-
     _onHTMLRender: function(parentNode, args) {
 
         if(this._rendered) return false;
+
+        var template = null;
 
         this._checkElement();
         if(this.willRender) {
             this.willRender();
         }
-        if(!this._parentAdded) {
-            parentNode.appendChild(this._element);
-            this._parentAdded = true;
+        parentNode.appendChild(this._element);
+
+        this._rendered = true;
+
+        if(this.didRender) {
+            this.didRender();
         }
 
-        this._didRender();
+        if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
+            this._baseViewDelete.viewDidRender(this);
+        }
+
+        this.fire('didRender');
 
         return true;
     },
 
-    _didRender: function() {
-        this._rendered = true;
-        if(this.didRender) {
-            this.didRender();
-        }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
-            this._baseViewDelete.viewDidRender(this);
-        }
-        this.fire('didRender');
-    },
-
-    _didLoad: function() {
-        if(this.didLoad) {
-            this.didLoad();
-        }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidLoad) {
-            this._baseViewDelete.viewDidLoad(this);
-        }
-        this.fire('didLoad');
-        this._didLoadFlg = true;
-    },
-
     _onChildrenRender: function(args) {
 
-        var containerNode = this._element;
+        var containerNode = this._getContainerNode();
         var renderView = function(child) {
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
-            if(child._viewIDMap) {
-                for(var id in child._viewIDMap) {
-                    renderView(child._viewIDMap[id]);
-                }
-            }
             if(firsttime) {
-                child._didLoad();
+                if(child.didLoad) {
+                    child.didLoad();
+                }
+                if(child._baseViewDelete && child._baseViewDelete.viewDidLoad) {
+                    child._baseViewDelete.viewDidLoad(child);
+                }
+                child.fire('didLoad');
+                child._didLoadFlg = true;
             }
         };
         for(var i=0,n=this._children.length;i<n;i++) {
             var child = this._children[i];
             renderView(child);
         };
+        if(this._viewIDMap) {
+            for(var id in this._viewIDMap) {
+                var child = this._viewIDMap[id];
+                renderView(child);
+            }
+        }
+    },
+    _getContainerNode: function() {
+        return this._element;
     },
 
     /**
@@ -3437,29 +3175,18 @@ Package('tupai.ui')
             return this._templateParameters;
         }
     },
-    _createViewIDMap: function() {
-        if(this._viewIDMap) return;
+    _createElementsIDMap: function() {
+        if(this._elementsIDMap) return;
 
-        var viewIDMap = {};
+        var elementsIDMap = {};
+        this._elementsIDMap = elementsIDMap;
+
         var elements = this._element.querySelectorAll('*[data-ch-id]');
         for (var i=0,len=elements.length; i<len; ++i) {
             var elm = elements[i];
             var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
-            var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
-            var view;
-            if(viewClsNm) {
-                var cls = Package.Class.forName(viewClsNm);
-                view = new cls();
-            } else {
-                view = new cp.View();
-            }
-            view._element = elm;
-            view._parent = this;
-            view._parentAdded = true;
-
-            viewIDMap[id] = view;
+            elementsIDMap[id] = elm;
         }
-        this._viewIDMap = viewIDMap;
     },
     _checkElement: function() {
         if(this._element) return;
@@ -3469,7 +3196,7 @@ Package('tupai.ui')
         this._element = this._templateEngine.createElement(undefined, template, data);
         if(!this._element) throw new Error('cannot create element');
 
-        this._createViewIDMap();
+        this._createElementsIDMap();
     },
 
     /**
@@ -3500,12 +3227,7 @@ Package('tupai.ui')
      *
      */
     getData: function() {
-        var data = this.getTemplateParameters();
-        if(this._element) {
-            return this._templateEngine.getBindedValue(this._element, data);
-        } else {
-            return data;
-        }
+        return this.getTemplateParameters();
     },
 
     /**
@@ -3562,7 +3284,43 @@ Package('tupai.ui')
     findViewById: function(id) {
 
         this._checkElement();
-        return this._viewIDMap[id];
+        if(!this._viewIDMap) this._viewIDMap = {};
+
+        var view = this._viewIDMap[id];
+        if(view === undefined) {
+            var element = this._elementsIDMap[id];
+            if(!element) {
+                return undefined;
+            }
+            view = this._viewIDMap[id] = new cp.View();
+            view._element = element;
+            view._parent = this;
+            view._rendered = true;
+        }
+
+        return view;
+    },
+    _onRemoveChildren: function() {
+        for(var i=0,n=this._children.length;i<n;i++) {
+            var c = this._children[i];
+            this._removeChild(c);
+        }
+    },
+    _removeChild: function(child) {
+
+        child._onRemoveChildren();
+
+        child._parent = null;
+        child._rendered = false;
+        child._events = null;
+        child._element.parentNode.removeChild(child._element);
+        if(child.didUnload) {
+            child.didUnload();
+        }
+        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
+            child._baseViewDelete.viewDidUnload(child);
+        }
+        child.fire('didUnload');
     },
 
     /**
@@ -3585,7 +3343,6 @@ Package('tupai.ui')
                 var child = this._viewIDMap[id];
                 this._removeChild(child);
             }
-            this._viewIDMap = {};
         }
         return this.clearChildrenByRange(0);
     },
@@ -3642,22 +3399,7 @@ Package('tupai.ui')
      *
      */
     removeChild: function(child) {
-
-        if(!child) return child;
-
-        var index = this._children.indexOf(child);
-        if(index < 0) {
-            for(var id in this._viewIDMap) {
-                if(this._viewIDMap[id] === child) {
-                    this._removeChild(child);
-                    delete this._viewIDMap[id];
-                    return child;
-                }
-            }
-            return null;
-        } else {
-            return this.removeChildAt(this._children.indexOf(child));
-        }
+        return this.removeChildAt(this._children.indexOf(child));
     },
 
     /**
@@ -3676,22 +3418,7 @@ Package('tupai.ui')
 
         child = child[0];
         this._removeChild(child);
-
         return child;
-    },
-
-    _removeChild: function(child) {
-        child._parent = null;
-        child._rendered = false;
-        child._events = null;
-        child._element.parentNode.removeChild(child._element);
-        if(child.didUnload) {
-            child.didUnload();
-        }
-        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
-        }
-        child.fire('didUnload');
     },
 
     /**
@@ -3740,17 +3467,6 @@ Package('tupai.ui')
      */
     setAttribute: function(key, value) {
         this._element.setAttribute(key, value);
-        return this;
-    },
-
-    /**
-     * remove attribute value
-     * @param {String} key
-     * @return {tupai.ui.View} this view
-     *
-     */
-    removeAttribute: function(key) {
-        this._element.removeAttribute(key);
         return this;
     },
 
@@ -4186,14 +3902,6 @@ Package('tupai.ui')
 
     /**
      * reload this tableView
-     *
-     */
-    reload: function() {
-        return this.reloadRowsFrom(0);
-    },
-
-    /**
-     * reload this tableView
      * @param {Number} [from]
      *
      */
@@ -4205,10 +3913,6 @@ Package('tupai.ui')
         if(this._hasHeader) domFrom ++;
         if(!this._container.clearChildrenByRange(domFrom)) return;
 
-        if(!this._tableViewDelegate) {
-            console.warn('table vie delegate not set. Please set it by tableview.setTableViewDelegate');
-            return;
-        }
         if(this._tableViewDelegate.cellForRowAtTop) {
             cell = this._tableViewDelegate.cellForRowAtTop(this);
             if(cell) {
@@ -4238,7 +3942,7 @@ Package('tupai.ui')
             cell = this._tableViewDelegate.cellForRowAtBottom(this);
             cell && this._addSubView(cell);
         }
-        this.render();
+        this._container.render();
     }
 });});
 /*
@@ -4257,6 +3961,7 @@ Package('tupai.ui')
 });});
 /*
  * TODO:
+ * - uniq CacheEngine
  * - sorted CacheEngine
  * */
 
@@ -4280,7 +3985,6 @@ Package('tupai.model.caches')
      * @param {String} name cache name
      * @param {Object} options
      * @param {Object} [options.memCache] memory cache config
-     * @param {Object} [options.uniqField] memory cache config
      * @param {Number} [options.memCache.limit] memory cache limit
      * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
      * @param {Object} [options.localStorage] use localStorage
@@ -4315,7 +4019,6 @@ Package('tupai.model.caches')
             }
         }
 
-        this._uniqField = options.uniqField;
         this._delegate = delegate;
         this._name = name;
     },
@@ -4389,8 +4092,6 @@ Package('tupai.model.caches')
      *
      */
     push: function(data) {
-
-        if(this._uniqField) data = this._removeDup(data);
         if(data instanceof Array) {
             this._storage.concat(data);
         } else {
@@ -4404,40 +4105,11 @@ Package('tupai.model.caches')
      *
      */
     unshift: function(data) {
-
-        if(this._uniqField) data = this._removeDup(data);
-
         if(data instanceof Array) {
             this._storage.concatFirst(data);
         } else {
             this._storage.unshift(data);
         }
-    },
-
-    _removeDup: function(data) {
-
-        var newKeys = {};
-        var uniqField = this._uniqField;
-        if(data instanceof Array) {
-            var newData=[];
-            for(var i=0, n=data.length; i<n; i++) {
-                var key = data[uniqField];
-                if(!newKeys[key]) {
-                    newData.push(data);
-                }
-                newKeys[key] = true;
-            }
-            data = newData;
-        } else {
-            newKeys[data[uniqField]] = true;
-        }
-
-        this._storage.filter(function(d) {
-            var key = d[uniqField];
-            return !(newKeys[key]);
-        });
-
-        return data;
     },
 
     /**
@@ -4845,14 +4517,11 @@ Package('tupai')
 .use('tupai.TransitManager')
 .use('tupai.ui.View')
 .use('tupai.TransitManager')
-.use('tupai.PushStateTransitManager')
 .define('Window', function(cp) { return cp.View.extend({
 
     /**
      * initialize
      * @param [config] window config
-     * @param [config.routes]
-     * @param [config.disablePushState] disable html5 history api
      * ### example with TransisManager
      *     new cp.Window({
      *         routes: {
@@ -4871,11 +4540,11 @@ Package('tupai')
 
         this._config = config || {};
         if(this._config.routes) {
-            if(config.disablePushState || !('state' in window.history)) {
+            //if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
-            } else {
-                this._transitManager = new cp.PushStateTransitManager(this, config.routes, config.pushState);
-            }
+            /*} else {
+                this._transitManager = new cp.PushStateTransitManager(this, config.routes);
+            }*/
             this._transitManager.setDelegate(this);
         } else if(this._config.rootViewController) {
             this._rootViewControllerClasszz = this._config.rootViewController;
@@ -4922,28 +4591,27 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
-        if(this._transitManager) {
-            return this.transit(url, options, {entry: true});
-        } else if(!this._rootViewControllerClasszz) {
-            throw new Error('missing root view controller.');
-        }
+        url = url || '/root';
+        if(this._transitManager) return this.transit(url, options);
+        else if(!this._rootViewControllerClasszz) throw new Error('missing root view controller.');
 
         var controller = new this._rootViewControllerClasszz(this);
-        controller.viewInit(options, '/root', 'root');
-        this.transitController(controller, '/root', options,{});
+
+        var name;
+        var pos = url.lastIndexOf('/');
+        if(pos >= 0) name = url.substring(pos+1);
+        else name = url;
+
+        controller.viewInit(options, url, name);
+        this.transitController(controller, url, options,{});
     },
 
     transitController: function (controller, url, options, transitOptions) {
         //console.log('transit by window ' + url);
-        if(!controller) {
-            // show 404
-            throw new Error('can\t found controller.('+url+')');
-        } else {
-            var view = controller.getContentView();
-            if(!view) throw new Error('cannot get contentView from ViewController');
-            this._displayView(view, transitOptions);
-            this._currentController = controller;
-        }
+        var view = controller.getContentView();
+        if(!view) throw new Error('cannot get contentView from ViewController');
+        this._displayView(view, transitOptions);
+        this._currentController = controller;
     },
 
     getCurrentController: function() {
@@ -5517,31 +5185,10 @@ Package('tupai')
     },
 
     /**
-     * fire application level event
-     * @param type event type
-     * @param parameter event parameter
-     */
-    fireDelegate: function(type, parameter) {
-        this._events.fireDelegate(type, parameter);
-    },
-
-    /**
      * add event listener
      * @param {String} type event type
      * @param {Object} listener event listener
      * @param {Boolean} [first] add listener to the top of event pool
-     */
-    on: function(type, listener, first) {
-        this._events.on(type, listener, first);
-    },
-
-    /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
-     *
      */
     addEventListener: function(type, listener, first) {
         this._events.addEventListener(type, listener, first);
@@ -5551,17 +5198,6 @@ Package('tupai')
      * remove event listener
      * @param type event type
      * @param listener which listener to remove
-     */
-    off: function(type, listener) {
-        this._events.off(type, listener);
-    },
-
-    /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
-     *
      */
     removeEventListener: function(type, listener) {
         this._events.removeEventListener(type, listener);
