@@ -5,7 +5,7 @@ test('initialize',function() {
     .run(function(cp) {
         var request = new cp.HttpRequest({url: '/static/test.json'});
         ok(request != undefined, 'initialize HttpRequest');
-        equal(request.getType(), 'json', 'default type value');
+        ok(request.getType() === undefined, 'default type value');
     });
     expect(2);
 });

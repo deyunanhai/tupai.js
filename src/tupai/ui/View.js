@@ -225,11 +225,6 @@ Package('tupai.ui')
         var renderView = function(child) {
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
-            if(child._viewIDMap) {
-                for(var id in child._viewIDMap) {
-                    renderView(child._viewIDMap[id]);
-                }
-            }
             if(firsttime) {
                 child._didLoad();
             }
@@ -238,6 +233,11 @@ Package('tupai.ui')
             var child = this._children[i];
             renderView(child);
         };
+        if(this._viewIDMap) {
+            for(var id in this._viewIDMap) {
+                renderView(this._viewIDMap[id]);
+            }
+        }
     },
 
     /**
