@@ -303,6 +303,7 @@ function watchFs() {
 
     var ignoredFn = function(path, st) {
         if(/\/\./.test(path)) return true;
+        if(/\/.*~$/.test(path)) return true;
         return false;
     };
     var watcher = chokidar.watch(paths, {ignored: ignoredFn, persistent: true, ignoreInitial: true});

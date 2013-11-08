@@ -53,6 +53,7 @@ Package('tupai.ui')
 
         this._events = undefined;
         this._didLoadFlg = false;
+        this._viewIDMap = undefined;
         this._templateEngine = cp.TemplateEngine;
         this._viewEvents = cp.ViewEvents;
         if(args) {
