@@ -187,6 +187,7 @@
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
                     This._packageObj[className] = obj;
                     This._classProvider[className] = obj;
+                    This._classProvider.This = obj;
                     This._className = className;
                     This._classObject = obj;
                 } else {
@@ -3222,6 +3223,7 @@ Package('tupai.ui')
 
         this._events = undefined;
         this._didLoadFlg = false;
+        this._viewIDMap = undefined;
         this._templateEngine = cp.TemplateEngine;
         this._viewEvents = cp.ViewEvents;
         if(args) {

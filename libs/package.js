@@ -187,6 +187,7 @@
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
                     This._packageObj[className] = obj;
                     This._classProvider[className] = obj;
+                    This._classProvider.This = obj;
                     This._className = className;
                     This._classObject = obj;
                 } else {
