@@ -25,7 +25,7 @@ Package('tupai')
     _delegate: undefined,
     initialize : function (windowObject, rules, config) {
 
-        this.SUPER.initialize.apply(this, arguments);
+        cp.TransitManager.prototype.initialize.apply(this, arguments);
 
         this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
@@ -61,7 +61,7 @@ Package('tupai')
         var index = this.lastIndexOf(targetUrl);
         if(index < 0) return;
         var bi = this.size() - index;
-        var prev = this.SUPER._removeUntil.apply(this, arguments);
+        var prev = cp.TransitManager.prototype._removeUntil.apply(this, arguments);
 
         this._enterStopPopStateEvent();
         window.history.go(bi*-1);
@@ -72,7 +72,7 @@ Package('tupai')
         return prev;
     },
     back: function (targetUrl, transitOptions) {
-        var ret = this.SUPER.back.apply(this, arguments);
+        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
         if(ret) {
             this._enterStopPopStateEvent();
             window.history.replaceState(
@@ -83,7 +83,7 @@ Package('tupai')
         }
     },
     transitWithHistory: function (url, options, transitOptions) {
-        var result = this.SUPER.transitWithHistory.apply(this, arguments);
+        var result = cp.TransitManager.prototype.transitWithHistory.apply(this, arguments);
         if(result) {
             window.history.pushState({
                 url:url,
@@ -151,7 +151,7 @@ Package('tupai')
                 Array.prototype.slice.call(arguments).splice(0, 2, entryUrl, options);
             }
         }
-        var result = this.SUPER.transit.apply(this, arguments);
+        var result = cp.TransitManager.prototype.transit.apply(this, arguments);
         if(result) {
             window.history.replaceState(this._current, "", this._createUrl(url, options));
         }

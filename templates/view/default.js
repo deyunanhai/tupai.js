@@ -2,19 +2,19 @@ Package(<%if(packageName){%>'<%=packageName%>'<%}%>)
 .use('tupai.ui.View')
 .define('<%=className%>', function(cp) { return cp.View.extend({
     initialize: function() {
-        this.SUPER.initialize.apply(this, arguments);
+        cp.View.prototype.initialize.apply(this, arguments);
     },
     getTemplate: function() {
-        return this.SUPER.getTemplate.apply(this, arguments);
+        return cp.View.prototype.getTemplate.apply(this, arguments);
     },
     getTemplateParameters: function() {
-        return this.SUPER.getTemplateParameters.apply(this, arguments);
+        return cp.View.prototype.getTemplateParameters.apply(this, arguments);
     },
     setValue: function(val) {
-        return this.SUPER.setValue.apply(this, arguments);
+        return cp.View.prototype.setValue.apply(this, arguments);
     },
     getValue: function() {
-        return this.SUPER.getValue.apply(this, arguments);
+        return cp.View.prototype.getValue.apply(this, arguments);
     },
     willRender: function() {
     },

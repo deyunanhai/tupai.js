@@ -5,11 +5,11 @@ Package("demo")
      * コンストラクタとして呼ばれる関数
      */
     initialize: function(x, y, z) {
-        this.SUPER.initialize(x, y);
+        cp.Point.prototype.initialize(x, y);
         this.z = z;
     },
     toString: function() {
 /*         return "["+this.x+","+this.y+","+this.z+"]"; */
-        return "["+this.SUPER.x+","+this.SUPER.y+","+this.z+"]";
+        return "["+this.x+","+this.y+","+this.z+"]";
     }
 }); });

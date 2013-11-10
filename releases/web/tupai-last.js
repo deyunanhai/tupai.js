@@ -230,8 +230,8 @@
         //extendedClass.prototype.__proto__ = parent.prototype;
         copy(extendedClass.prototype, parent.prototype, false);
 
-        extendedClass.prototype.SUPER = this.prototype;
-        extendedClass.SUPER = this;
+        //extendedClass.prototype.SUPER = this.prototype;
+        //extendedClass.SUPER = this;
         extendedClass.extend = parent.extend;
         return extendedClass;
     };
@@ -299,7 +299,7 @@
  *     .use('tupai.events.Events')
  *     .define('Model', function(cp) { return cp.Events.extend({
  *         initialize: function() {
- *             this.SUPER.initialize.apply(this, arguments);
+ *             cp.Events.prototype.initialize.apply(this, arguments);
  *             this._map = {};
  *         },
  *         set: function(obj) {
@@ -642,7 +642,7 @@ Package('tupai.model.caches')
      */
     initialize: function(cache, size, args) {
 
-        this.SUPER.initialize.apply(this, arguments);
+        cp.DataSet.prototype.initialize.apply(this, arguments);
         if(!cache) throw new Error('missing required parameter. cache');
 
         this._cache = cache;
@@ -1699,20 +1699,29 @@ Package('tupai.ui')
                 elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
-            elm.src = value;
-        } else if(elm.tagName === 'A') {
-            if(typeof value === 'object') {
-                elm.innerHTML = value.value;
-                elm.href = value.href;
+            if(value !== undefined) {
+                elm.src = value;
             } else {
-                elm.innerHTML = value;
+                elm.removeAttribute('src');
+            }
+        } else if(elm.tagName === 'A') {
+            var href = value;
+            if(typeof value === 'object') {
+                href = value.href;
+                elm.innerHTML = (value.text===undefined?'':value.text);
+            }
+
+            if(href !== undefined) {
+                elm.href = href;
+            } else {
+                elm.removeAttribute('href');
             }
         } else {
             // other
             if(value === undefined) {
                 elm.innerHTML = '';
             } else {
-                elm.innerHTML = value;
+                elm.innerHTML = ((value===undefined)?'':value);
             }
         }
     };
@@ -1855,7 +1864,7 @@ Package('tupai')
     _delegate: undefined,
     initialize : function (windowObject, rules, config) {
 
-        this.SUPER.initialize.apply(this, arguments);
+        cp.TransitManager.prototype.initialize.apply(this, arguments);
 
         this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
@@ -1891,7 +1900,7 @@ Package('tupai')
         var index = this.lastIndexOf(targetUrl);
         if(index < 0) return;
         var bi = this.size() - index;
-        var prev = this.SUPER._removeUntil.apply(this, arguments);
+        var prev = cp.TransitManager.prototype._removeUntil.apply(this, arguments);
 
         this._enterStopPopStateEvent();
         window.history.go(bi*-1);
@@ -1902,7 +1911,7 @@ Package('tupai')
         return prev;
     },
     back: function (targetUrl, transitOptions) {
-        var ret = this.SUPER.back.apply(this, arguments);
+        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
         if(ret) {
             this._enterStopPopStateEvent();
             window.history.replaceState(
@@ -1913,7 +1922,7 @@ Package('tupai')
         }
     },
     transitWithHistory: function (url, options, transitOptions) {
-        var result = this.SUPER.transitWithHistory.apply(this, arguments);
+        var result = cp.TransitManager.prototype.transitWithHistory.apply(this, arguments);
         if(result) {
             window.history.pushState({
                 url:url,
@@ -1981,7 +1990,7 @@ Package('tupai')
                 Array.prototype.slice.call(arguments).splice(0, 2, entryUrl, options);
             }
         }
-        var result = this.SUPER.transit.apply(this, arguments);
+        var result = cp.TransitManager.prototype.transit.apply(this, arguments);
         if(result) {
             window.history.replaceState(this._current, "", this._createUrl(url, options));
         }
@@ -2670,7 +2679,7 @@ Package('tupai.model.caches')
      */
     initialize: function(cache, args) {
 
-        this.SUPER.initialize.apply(this, arguments);
+        cp.DataSet.prototype.initialize.apply(this, arguments);
         if(!cache) throw new Error('missing required parameter. cache');
 
         this._cache = cache;

@@ -22,7 +22,7 @@ Package('tupai.model.caches')
      */
     initialize: function(cache, size, args) {
 
-        this.SUPER.initialize.apply(this, arguments);
+        cp.DataSet.prototype.initialize.apply(this, arguments);
         if(!cache) throw new Error('missing required parameter. cache');
 
         this._cache = cache;

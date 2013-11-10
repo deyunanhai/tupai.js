@@ -57,11 +57,11 @@ test('extend',function() {
 	.define('Child', function(cc) { return Package.classProvider.x.yy.zzz.Parent.extend({
 		initialize: function(v) {
 			ok(v, 'child initialize run');
-			this.SUPER.initialize(v);
+			Package.classProvider.x.yy.zzz.Parent.prototype.initialize(v);
 		},
 	    some_function: function(v) {
 	        ok(v, 'child function run');
-	        this.SUPER.some_function(v);
+	        Package.classProvider.x.yy.zzz.Parent.prototype.some_function(v);
 	    }
 	});}).run(function(cc) {
 		new cc.Child(true).some_function(true);

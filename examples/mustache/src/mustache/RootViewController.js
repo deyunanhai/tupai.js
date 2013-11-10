@@ -4,7 +4,7 @@ Package('mustache')
 .use('mustache.Templates')
 .define('RootViewController', function(cp) { return cp.ViewController.extend({
     viewInit: function() {
-        this.SUPER.viewInit.apply(this, arguments);
+        cp.ViewController.prototype.viewInit.apply(this, arguments);
         var view = new cp.View({
             template: cp.Templates.get('mustache.RootViewController.content'),
             templateParameters: {
@@ -15,10 +15,10 @@ Package('mustache')
         this.setContentView(view);
     },
     viewDidLoad: function (view) {
-        this.SUPER.viewDidLoad.apply(this, arguments);
+        cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
     },
     viewDidUnload: function (view) {
-        this.SUPER.viewDidUnload.apply(this, arguments);
+        cp.ViewController.prototype.viewDidUnload.apply(this, arguments);
     },
     /* call from transisManager */
     transitController: function (controller, url, options, transitOptions) {

@@ -4,7 +4,7 @@ Package(<%if(packageName){%>'<%=packageName%>'<%}%>)
 .use('<%=templateFullClassName%>')
 .define('<%=className%>', function(cp) { return cp.ViewController.extend({
     viewInit: function(options, url) {
-        this.SUPER.viewInit.apply(this, arguments);
+        cp.ViewController.prototype.viewInit.apply(this, arguments);
         var view = new cp.View({
             template: cp.<%=templateClassName%>.get('<%=templateName%>'),
             templateParameters: {
@@ -14,10 +14,10 @@ Package(<%if(packageName){%>'<%=packageName%>'<%}%>)
         this.setContentView(view);
     },
     viewDidLoad: function (view) {
-        this.SUPER.viewDidLoad.apply(this, arguments);
+        cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
     },
     viewDidUnload: function (view) {
-        this.SUPER.viewDidUnload.apply(this, arguments);
+        cp.ViewController.prototype.viewDidUnload.apply(this, arguments);
     },
     /* call from transisManager */
     transitController: function (controller, url, options, transitOptions) {

@@ -23,7 +23,7 @@
             console.log('print by child');
         },
         printByParent: function() {
-            this.SUPER.print.apply(this, arguments);
+            cp.Parent.prototype.print.apply(this, arguments);
         }
     });});
 

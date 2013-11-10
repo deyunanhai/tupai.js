@@ -5,7 +5,7 @@ Package('jsonp')
 .use('jsonp.Templates')
 .define('RootViewController', function(cp) { return cp.ViewController.extend({
     viewInit: function() {
-        this.SUPER.viewInit.apply(this, arguments);
+        cp.ViewController.prototype.viewInit.apply(this, arguments);
         var view = new cp.TableView();
         view.setTableViewDelegate(this);
         this.setContentView(view);
@@ -24,11 +24,11 @@ Package('jsonp')
         });
     },
     viewDidLoad: function (view) {
-        this.SUPER.viewDidLoad.apply(this, arguments);
+        cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
         this._fetchNext();
     },
     viewDidUnload: function(view) {
-        this.SUPER.viewDidUnload.apply(this, arguments);
+        cp.ViewController.prototype.viewDidUnload.apply(this, arguments);
     },
     numberOfRows: function() {
         return this._cache.size();

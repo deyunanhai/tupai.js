@@ -38,7 +38,7 @@
  *     .use('tupai.events.Events')
  *     .define('Model', function(cp) { return cp.Events.extend({
  *         initialize: function() {
- *             this.SUPER.initialize.apply(this, arguments);
+ *             cp.Events.prototype.initialize.apply(this, arguments);
  *             this._map = {};
  *         },
  *         set: function(obj) {

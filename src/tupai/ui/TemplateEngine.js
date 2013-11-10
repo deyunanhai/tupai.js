@@ -122,20 +122,29 @@ Package('tupai.ui')
                 elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
-            elm.src = value;
-        } else if(elm.tagName === 'A') {
-            if(typeof value === 'object') {
-                elm.innerHTML = value.value;
-                elm.href = value.href;
+            if(value !== undefined) {
+                elm.src = value;
             } else {
-                elm.innerHTML = value;
+                elm.removeAttribute('src');
+            }
+        } else if(elm.tagName === 'A') {
+            var href = value;
+            if(typeof value === 'object') {
+                href = value.href;
+                elm.innerHTML = (value.text===undefined?'':value.text);
+            }
+
+            if(href !== undefined) {
+                elm.href = href;
+            } else {
+                elm.removeAttribute('href');
             }
         } else {
             // other
             if(value === undefined) {
                 elm.innerHTML = '';
             } else {
-                elm.innerHTML = value;
+                elm.innerHTML = ((value===undefined)?'':value);
             }
         }
     };

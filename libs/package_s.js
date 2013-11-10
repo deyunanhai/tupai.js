@@ -127,8 +127,8 @@
         //extendedClass.prototype.__proto__ = parent.prototype;
         copy(extendedClass.prototype, parent.prototype, false);
 
-        extendedClass.prototype.SUPER = this.prototype;
-        extendedClass.SUPER = this;
+        //extendedClass.prototype.SUPER = this.prototype;
+        //extendedClass.SUPER = this;
         extendedClass.extend = parent.extend;
         return extendedClass;
     };

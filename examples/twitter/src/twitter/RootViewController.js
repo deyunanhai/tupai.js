@@ -16,10 +16,10 @@ Package('twitter')
         this._body = body;
     },
     viewDidLoad: function (view) {
-        this.SUPER.viewDidLoad.apply(this, arguments);
+        cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
     },
     viewDidUnload: function (view) {
-        this.SUPER.viewDidUnload.apply(this, arguments);
+        cp.ViewController.prototype.viewDidUnload.apply(this, arguments);
     },
     /* call from transisManager */
     transitController: function (controller, url, options, transitOptions) {

@@ -9,6 +9,6 @@ Package('twitter.api')
                 return nextPage.replace(/^\?/,'');
             }
             else throw new Error('no next page');
-        } else return this.SUPER.getQueryString.apply(this, arguments);
+        } else return cp.HttpRequest.prototype.getQueryString.apply(this, arguments);
     }
 });});
