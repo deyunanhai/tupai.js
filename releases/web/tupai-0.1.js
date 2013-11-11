@@ -3945,7 +3945,7 @@ Package('tupai.ui')
     animate : function (view, container, direction, finish) {
     }
 
-});}).run(function(cp) {
+});}).define(function(cp) {
 
     cp.View.cssNumber = {
         'width': true,
