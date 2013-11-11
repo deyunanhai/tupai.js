@@ -5,6 +5,7 @@ Package()
 
     var app = new cp.Application({
         window: {
+            //disablePushState: true,
             routes: cp.Config['routes']
         },
         cacheManager: cp.Config['cache_manager'],

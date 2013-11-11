@@ -74,12 +74,15 @@ Package('tupai')
     back: function (targetUrl, transitOptions) {
         var ret = this.SUPER.back.apply(this, arguments);
         if(ret) {
+            /*
+            need do this window history is really backed.
             this._enterStopPopStateEvent();
             window.history.replaceState(
                 this._current, "",
                 this._createUrl(this._current.url, this._current.options)
             );
             this._exitStopPopStateEvent();
+            */
         }
     },
     transitWithHistory: function (url, options, transitOptions) {
