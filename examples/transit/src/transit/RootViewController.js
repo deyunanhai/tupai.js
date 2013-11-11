@@ -5,14 +5,17 @@ Package('transit')
 .define('RootViewController', function(cp) { return cp.ViewController.extend({
     viewInit: function(options, url) {
         console.log(url);
+        console.log(options);
         var view = new cp.View({
-            template: cp.Templates.get('template_root')
+            template: cp.Templates.get('template_root'),
+            templateParameters: options
         });
         view.setDelegate(this);
         this.setContentView(view);
     },
     transitController: function(controller, url, options, transitOptions) {
         console.log('transitController: ' + url);
+        console.log(options);
         this._container.clearChildren();
         this._container.addSubView(controller.getContentView());
         this._container.render();

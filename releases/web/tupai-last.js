@@ -1913,12 +1913,15 @@ Package('tupai')
     back: function (targetUrl, transitOptions) {
         var ret = cp.TransitManager.prototype.back.apply(this, arguments);
         if(ret) {
+            /*
+            need do this window history is really backed.
             this._enterStopPopStateEvent();
             window.history.replaceState(
                 this._current, "",
                 this._createUrl(this._current.url, this._current.options)
             );
             this._exitStopPopStateEvent();
+            */
         }
     },
     transitWithHistory: function (url, options, transitOptions) {
@@ -3953,7 +3956,7 @@ Package('tupai.ui')
     animate : function (view, container, direction, finish) {
     }
 
-});}).run(function(cp) {
+});}).define(function(cp) {
 
     cp.View.cssNumber = {
         'width': true,
