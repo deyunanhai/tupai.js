@@ -115,15 +115,20 @@ Package('tupai')
      *   back to targetUrl, if the targetUrl is not in the stack,
      *   will be clear stack and transit the targetUrl
      * @param {Object} [transitOptions]
+    *  @return 0: failed, 1: back success, 2: new transit success
      */
     back: function (targetUrl, transitOptions) {
         var prev;
+        var ret=1;
         if (targetUrl) {
             prev = this._removeUntil(targetUrl);
-            if(!prev) prev = {url: targetUrl};
+            if(!prev) {
+                ret = 2;
+                prev = {url: targetUrl};
+            }
         } else {
             prev = this._history.pop();
-            if (!prev) return;
+            if (!prev) return 0;
         }
         var url = prev.url;
 
@@ -133,9 +138,9 @@ Package('tupai')
         transitOptions = transitOptions || {};
         transitOptions.transitType = 2; // back
         //console.log('back to ' + url);
-        var ret = this._transit(url, options, transitOptions);
+        var result = this._transit(url, options, transitOptions);
         this._current = prev;
-        return ret;
+        return (result?ret:0);
     },
 
     /**

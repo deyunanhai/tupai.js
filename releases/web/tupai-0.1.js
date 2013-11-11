@@ -1430,15 +1430,20 @@ Package('tupai')
      *   back to targetUrl, if the targetUrl is not in the stack,
      *   will be clear stack and transit the targetUrl
      * @param {Object} [transitOptions]
+    *  @return 0: failed, 1: back success, 2: new transit success
      */
     back: function (targetUrl, transitOptions) {
         var prev;
+        var ret=1;
         if (targetUrl) {
             prev = this._removeUntil(targetUrl);
-            if(!prev) prev = {url: targetUrl};
+            if(!prev) {
+                ret = 2;
+                prev = {url: targetUrl};
+            }
         } else {
             prev = this._history.pop();
-            if (!prev) return;
+            if (!prev) return 0;
         }
         var url = prev.url;
 
@@ -1448,9 +1453,9 @@ Package('tupai')
         transitOptions = transitOptions || {};
         transitOptions.transitType = 2; // back
         //console.log('back to ' + url);
-        var ret = this._transit(url, options, transitOptions);
+        var result = this._transit(url, options, transitOptions);
         this._current = prev;
-        return ret;
+        return (result?ret:0);
     },
 
     /**
@@ -1912,16 +1917,15 @@ Package('tupai')
     },
     back: function (targetUrl, transitOptions) {
         var ret = cp.TransitManager.prototype.back.apply(this, arguments);
-        if(ret) {
-            /*
-            need do this window history is really backed.
+        if(ret === 2) { // new transit success
+            // need do this window history is really backed.
+            // do this will replace the last current url.
             this._enterStopPopStateEvent();
             window.history.replaceState(
                 this._current, "",
                 this._createUrl(this._current.url, this._current.options)
             );
             this._exitStopPopStateEvent();
-            */
         }
     },
     transitWithHistory: function (url, options, transitOptions) {

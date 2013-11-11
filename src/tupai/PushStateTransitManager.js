@@ -73,16 +73,15 @@ Package('tupai')
     },
     back: function (targetUrl, transitOptions) {
         var ret = cp.TransitManager.prototype.back.apply(this, arguments);
-        if(ret) {
-            /*
-            need do this window history is really backed.
+        if(ret === 2) { // new transit success
+            // need do this window history is really backed.
+            // do this will replace the last current url.
             this._enterStopPopStateEvent();
             window.history.replaceState(
                 this._current, "",
                 this._createUrl(this._current.url, this._current.options)
             );
             this._exitStopPopStateEvent();
-            */
         }
     },
     transitWithHistory: function (url, options, transitOptions) {
