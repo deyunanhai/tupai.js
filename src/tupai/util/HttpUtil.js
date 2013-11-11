@@ -5,25 +5,45 @@
 Package('tupai.util')
 .define('HttpUtil', function(cp) {
 
-    function getQueryStringByUrl(url, key, default_) {
-        if (default_==null) default_='';
-        key = key.replace(/[\[]/,'\\\[').replace(/[\]]/,'\\\]');
-        var regex = new RegExp('[\\?&]'+key+'=([^&#]*)');
-        var qs = regex.exec(url);
-        if(qs == null)
-            return default_;
-        else
-            return qs[1];
+    function parseOptionsFromQueryString(paramsStr, options) {
+
+        if(!paramsStr) return options;
+        var pairs = paramsStr.split('&');
+        options = options || {};
+        for(var i=0, n=pairs.length; i<n; i++) {
+            var c = pairs[i].split('=');
+            options[c[0]] = decodeURIComponent(c[1]);
+        }
+        return options;
     }
-    function getUrlWithoutQueryString(url) {
-        return url.split('?')[0];
+    function createQueryString(options) {
+
+        var qs = '';
+        if(typeof options !== 'object') return qs;
+        for(var name in options) {
+            var val = options[name];
+            qs += '&' + name + '=' + encodeURIComponent(val);
+        }
+        if(qs.length > 0) qs = qs.substring(1);
+        return qs;
     }
-    function getQueryString(key, default_) {
-        return getQueryStringByUrl(window.location.href, key, default_);
-    }
-    function compareUrlWithOutQueryString(srcUrl, tarUrl) {
-        return (getUrlWithoutQueryString(srcUrl) ==
-                getUrlWithoutQueryString(tarUrl));
+    function parseOptionsFromUrl(url) {
+
+        if(typeof url !== 'string') return;
+        var pos = url.indexOf('#');
+        if(pos >= 0) url = url.substring(0, pos);
+
+        var options = {};
+        matches = url.match(/^(.*)\?(.*)$/);
+        if(matches) {
+            url = matches[1];
+            var params = matches[2];
+            options = parseOptionsFromQueryString(params, options);
+        }
+        return {
+            url: url,
+            options: options
+        };
     }
 
     function createRequester() {
@@ -146,6 +166,9 @@ Package('tupai.util')
 
     return {
         encode: encode,
+        parseOptionsFromQueryString: parseOptionsFromQueryString,
+        parseOptionsFromUrl: parseOptionsFromUrl,
+        createQueryString: createQueryString,
         ajax: function(url, success, error, options) {
             doAfterLoad([url, success, error, options]);
         }

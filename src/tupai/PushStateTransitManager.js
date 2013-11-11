@@ -19,7 +19,7 @@
  *
  */
 Package('tupai')
-.use('tupai.util.HashUtil')
+.use('tupai.util.HttpUtil')
 .use('tupai.TransitManager')
 .define('PushStateTransitManager', function (cp) { return cp.TransitManager.extend({
     _delegate: undefined,
@@ -95,31 +95,9 @@ Package('tupai')
         }
         return result;
     },
-    _createOptionsFromStr: function(paramsStr, options) {
-
-        if(!paramsStr) return options;
-        var pairs = paramsStr.split('&');
-        options = options || {};
-        for(var i=0, n=pairs.length; i<n; i++) {
-            var c = pairs[i].split('=');
-            options[c[0]] = decodeURIComponent(c[1]);
-        }
-        return options;
-    },
-    _createQueryString: function(options) {
-
-        var qs = '';
-        if(typeof options !== 'object') return qs;
-        for(var name in options) {
-            var val = options[name];
-            qs += '&' + name + '=' + encodeURIComponent(val);
-        }
-        if(qs.length > 0) qs = qs.substring(1);
-        return qs;
-    },
     _createUrl: function(url, options) {
 
-        var qs = this._createQueryString(options);
+        var qs = cp.HttpUtil.createQueryString(options);
         if(qs.length > 0) {
             if(url.indexOf('?') < 0) url += '?';
             url += qs;
@@ -134,18 +112,7 @@ Package('tupai')
         var regexp = new RegExp("^(.*)"+escapeRegExp(this._separator)+"(.*)");
         var matches = (window.location.href+'').match(regexp);
         if(matches) {
-            var url = matches[2];
-            var options = {};
-            matches = url.match(/^(.*)\?(.*)$/);
-            if(matches) {
-                url = matches[1];
-                var params = matches[2];
-                options = this._createOptionsFromStr(params, options);
-            }
-            return {
-                url: url,
-                options: options
-            };
+            return cp.HttpUtil.parseOptionsFromUrl(matches[2]);
         }
     },
     transit: function (url, options, transitOptions) {
@@ -156,7 +123,6 @@ Package('tupai')
             if(entry) {
                 url = entry.url;
                 options = entry.options;
-                Array.prototype.slice.call(arguments).splice(0, 2, entry.url, entry.options);
             }
         }
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
