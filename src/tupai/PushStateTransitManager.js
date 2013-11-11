@@ -126,34 +126,40 @@ Package('tupai')
         }
         return this._separator + url;
     },
+    _parseFromLocation: function() {
+
+        var escapeRegExp = function (string) {
+            return string.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1");
+        };
+        var regexp = new RegExp("^(.*)"+escapeRegExp(this._separator)+"(.*)");
+        var matches = (window.location.href+'').match(regexp);
+        if(matches) {
+            var url = matches[2];
+            var options = {};
+            matches = url.match(/^(.*)\?(.*)$/);
+            if(matches) {
+                url = matches[1];
+                var params = matches[2];
+                options = this._createOptionsFromStr(params, options);
+            }
+            return {
+                url: url,
+                options: options
+            };
+        }
+    },
     transit: function (url, options, transitOptions) {
         if(transitOptions && transitOptions.entry) {
             // entry point
+            var entry = this._parseFromLocation();
 
-            var escapeRegExp = function (string) {
-                return string.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1");
-            };
-            var entryUrl;
-            var regexp = new RegExp("^(.*)"+escapeRegExp(this._separator)+"(.*)");
-            var matches = (window.location.href+'').match(regexp);
-            if(matches) {
-                entryUrl = matches[2];
-            }
-
-            if(entryUrl) {
-                options = {};
-                matches = entryUrl.match(/^(.*)\?(.*)$/);
-                if(matches) {
-                    entryUrl = matches[1];
-                    var params = matches[2];
-                    options = this._createOptionsFromStr(params, options);
-                }
-
-                url = entryUrl;
-                Array.prototype.slice.call(arguments).splice(0, 2, entryUrl, options);
+            if(entry) {
+                url = entry.url;
+                options = entry.options;
+                Array.prototype.slice.call(arguments).splice(0, 2, entry.url, entry.options);
             }
         }
-        var result = cp.TransitManager.prototype.transit.apply(this, arguments);
+        var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
             window.history.replaceState(this._current, "", this._createUrl(url, options));
         }
