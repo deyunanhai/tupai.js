@@ -103,9 +103,25 @@ Package('tupai.ui')
      *
      */
     var setValue = function(elm, value) {
-        if (elm.length) {
+        if (elm.length !== undefined) {
             // select
-            var values = (value instanceof Array) ? value : [value];
+            var values;
+            if(value instanceof Array) {
+                values = value;
+            } else if(typeof value === 'object') {
+                var config = value;
+                var fields = config.fields;
+                var html = '';
+                if(fields) {
+                    fields.forEach(function(f) {
+                        html += '<option value="'+f.value+'">'+f.text+'</option>';
+                    });
+                }
+                elm.innerHTML=html;
+                return setValue(elm, config.value);
+            } else {
+                values = [value];
+            }
             for(var i=0, n=elm.length; i<n; i++) {
                 var selm = elm[i];
                 if (values.indexOf(selm.value) != -1) {
