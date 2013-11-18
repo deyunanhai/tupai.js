@@ -415,6 +415,7 @@ Package('tupai.ui')
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
                 var child = this._viewIDMap[id];
+                child.clearChildren();
                 this._removeChild(child);
             }
             this._viewIDMap = {};

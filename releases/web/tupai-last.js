@@ -353,7 +353,14 @@ Package('tupai.events')
     fire: function(type, parameter) {
         var chain = this._events[type];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i<n;i++) {
@@ -375,7 +382,14 @@ Package('tupai.events')
     fireDelegate: function(name, type, parameter) {
         var chain = this._events[name];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.targetName = name;
             e.eventName = type;
             e.stop = false;
@@ -3612,6 +3626,7 @@ Package('tupai.ui')
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
                 var child = this._viewIDMap[id];
+                child.clearChildren();
                 this._removeChild(child);
             }
             this._viewIDMap = {};
@@ -4743,19 +4758,36 @@ Package('tupai.model')
         var THIS = this;
         this._client.execute(request, {
             didHttpRequestSuccess: function(response, request) {
-                THIS._responseDelegate &&
-                THIS._responseDelegate.didHttpRequestSuccess &&
-                THIS._responseDelegate.didHttpRequestSuccess(name, requestName, response, request);
 
-                THIS.notify(name, requestName, 'didHttpRequestSuccess', response, request);
+                var needNotify = true;
+                if(THIS._responseDelegate && THIS._responseDelegate.didHttpRequestSuccess) {
+                    THIS._responseDelegate.didHttpRequestSuccess(
+                        name, requestName, response, request
+                    );
+                    if(THIS._responseDelegate.handleNotify) needNotify = false;
+                }
+
+                if(needNotify) {
+                    THIS.notify(
+                        name, requestName, 'didHttpRequestSuccess', response, request
+                    );
+                }
                 if(typeof(success) == 'function') success(name, requestName, response, request);
             },
             didHttpRequestError: function(response, request) {
-                THIS._responseDelegate &&
-                THIS._responseDelegate.didHttpRequestError &&
-                THIS._responseDelegate.didHttpRequestError(name, requestName, response, request);
+                var needNotify = true;
+                if(THIS._responseDelegate && THIS._responseDelegate.didHttpRequestError) {
+                    THIS._responseDelegate.didHttpRequestError(
+                        name, requestName, response, request
+                    );
+                    if(THIS._responseDelegate.handleNotify) needNotify = false;
+                }
 
-                THIS.notify(name, requestName, 'didHttpRequestError', response, request);
+                if(needNotify) {
+                    THIS.notify(
+                        name, requestName, 'didHttpRequestError', response, request
+                    );
+                }
                 if(typeof(error) == 'function') error(name, requestName, response, request);
             },
         });
@@ -5570,7 +5602,7 @@ Package('tupai')
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
+     *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
      *
      */
     addEventListener: function(type, listener, first) {
@@ -5590,7 +5622,7 @@ Package('tupai')
      * same as off.
      * @param {String} type eventType
      * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
+     *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
      *
      */
     removeEventListener: function(type, listener) {

@@ -92,7 +92,14 @@ Package('tupai.events')
     fire: function(type, parameter) {
         var chain = this._events[type];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i<n;i++) {
@@ -114,7 +121,14 @@ Package('tupai.events')
     fireDelegate: function(name, type, parameter) {
         var chain = this._events[name];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.targetName = name;
             e.eventName = type;
             e.stop = false;
