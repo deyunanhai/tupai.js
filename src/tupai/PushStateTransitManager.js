@@ -32,7 +32,7 @@ Package('tupai')
         var THIS = this;
         window.addEventListener("popstate", function(jsevent) {
             if(THIS._stopPopStateEventStatus) return;
-            //console.log(jsevent);
+            console.log(jsevent);
             var state = jsevent.state;
             if(!state) return;
             var url = state.url;
@@ -83,7 +83,7 @@ Package('tupai')
             this._enterStopPopStateEvent();
             window.history.replaceState({
                 url: this._current.url,
-                options: this._current.url,
+                options: this._current.options,
                 transitOptions: this._current.transitOptions,
                 history: this._history
             }, "", this._createUrl(this._current.url, this._current.options));
@@ -131,12 +131,18 @@ Package('tupai')
                 url = entry.url;
                 options = entry.options;
             }
+
+            var state = window.history.state;
+            if(state) {
+                // use history saved in state.
+                this._history = state.history;
+            }
         }
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
             window.history.replaceState({
                 url: this._current.url,
-                options: this._current.url,
+                options: this._current.options,
                 transitOptions: this._current.transitOptions,
                 history: this._history
             }, "", this._createUrl(url, options));
