@@ -109,9 +109,7 @@ Package('tupai')
         var prev;
         do {
             prev = this._history.pop();
-            if (!prev) {
-                break;
-            } else if(prev.url == targetUrl) {
+            if (!prev || prev.url == targetUrl) {
                 break;
             }
         } while (1);
@@ -260,6 +258,7 @@ Package('tupai')
         console.log(JSON.stringify(this._computeTransitRoute('/dd/cc/dd')));
 */
 
+        options = options || {}; // make sure the options is not null
         if (this._current &&
             this._current.url == url &&
             cp.HashUtil.equals(this._current.options, options)) {

@@ -1461,9 +1461,7 @@ Package('tupai')
         var prev;
         do {
             prev = this._history.pop();
-            if (!prev) {
-                break;
-            } else if(prev.url == targetUrl) {
+            if (!prev || prev.url == targetUrl) {
                 break;
             }
         } while (1);
@@ -1961,13 +1959,14 @@ Package('tupai')
         var initialURL = location.href;
         var THIS = this;
         window.addEventListener("popstate", function(jsevent) {
-            if(this._stopPopStateEventStatus) return;
+            if(THIS._stopPopStateEventStatus) return;
             //console.log(jsevent);
             var state = jsevent.state;
             if(!state) return;
             var url = state.url;
             if(!url) return;
 
+            THIS._history = state.history || [];
             THIS._transit(
                 url,
                 state.options,
@@ -1989,7 +1988,10 @@ Package('tupai')
     _removeUntil: function(targetUrl) {
         if(!targetUrl) return;
         var index = this.lastIndexOf(targetUrl);
-        if(index < 0) return;
+        if(index < 0) {
+            this._history.length = 0;
+            return;
+        }
         var bi = this.size() - index;
         var prev = cp.TransitManager.prototype._removeUntil.apply(this, arguments);
 
@@ -2007,10 +2009,12 @@ Package('tupai')
             // need do this window history is really backed.
             // do this will replace the last current url.
             this._enterStopPopStateEvent();
-            window.history.replaceState(
-                this._current, "",
-                this._createUrl(this._current.url, this._current.options)
-            );
+            window.history.replaceState({
+                url: this._current.url,
+                options: this._current.url,
+                transitOptions: this._current.transitOptions,
+                history: this._history
+            }, "", this._createUrl(this._current.url, this._current.options));
             this._exitStopPopStateEvent();
         }
     },
@@ -2020,7 +2024,8 @@ Package('tupai')
             window.history.pushState({
                 url:url,
                 options:options,
-                transitOptions: transitOptions
+                transitOptions: transitOptions,
+                history: this._history
             }, "", this._createUrl(url, options));
         }
         return result;
@@ -2057,7 +2062,12 @@ Package('tupai')
         }
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
-            window.history.replaceState(this._current, "", this._createUrl(url, options));
+            window.history.replaceState({
+                url: this._current.url,
+                options: this._current.url,
+                transitOptions: this._current.transitOptions,
+                history: this._history
+            }, "", this._createUrl(url, options));
         }
         return result;
     }
