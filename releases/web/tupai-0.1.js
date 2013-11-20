@@ -1424,6 +1424,15 @@ Package('tupai')
         }
         return undefined;
     },
+
+    /**
+     *  get histories
+     *  @return histories
+     */
+    getHistories: function() {
+        return this._history;
+    },
+
     size: function() {
         return this._history.length;
     },
@@ -1467,32 +1476,56 @@ Package('tupai')
      *   back to targetUrl, if the targetUrl is not in the stack,
      *   will be clear stack and transit the targetUrl
      * @param {Object} [transitOptions]
-    *  @return 0: failed, 1: back success, 2: new transit success
+     *  @return 0: failed, 1: back success, 2: new transit success
      */
     back: function (targetUrl, transitOptions) {
         var prev;
-        var ret=1;
+        var isNew=false;
         if (targetUrl) {
             prev = this._removeUntil(targetUrl);
             if(!prev) {
-                ret = 2;
+                isNew = true;
                 prev = {url: targetUrl};
             }
         } else {
             prev = this._history.pop();
-            if (!prev) return 0;
         }
+        return this._back(prev, transitOptions, isNew);
+    },
+
+    /**
+     * back to a specific URL from the history list.
+     * @param {String} index must be positive number
+     * @return 0: failed, 1: back success
+     */
+    backTo: function(index) {
+
+        if(index < 1 || index > this._history.length) return 0;
+        var prev;
+        while(index>0) {
+            prev = this._history.pop();
+            index --;
+        }
+        return this._back(prev);
+    },
+
+    _back: function(prev, transitOptions, isNew) {
+        if (!prev) return 0;
         var url = prev.url;
 
         var options = prev.options;
-        var current = this._current;
+        //var current = this._current;
 
         transitOptions = transitOptions || {};
         transitOptions.transitType = 2; // back
         //console.log('back to ' + url);
         var result = this._transit(url, options, transitOptions);
         this._current = prev;
-        return (result?ret:0);
+        if(result) {
+            return isNew?2:1;
+        } else {
+            return 0;
+        }
     },
 
     /**
@@ -1968,8 +2001,8 @@ Package('tupai')
 
         return prev;
     },
-    back: function (targetUrl, transitOptions) {
-        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
+    _back: function (prev, transitOptions) {
+        var ret = cp.TransitManager.prototype._back.apply(this, arguments);
         if(ret === 2) { // new transit success
             // need do this window history is really backed.
             // do this will replace the last current url.
@@ -4962,11 +4995,27 @@ Package('tupai')
     },
 
     /**
+     * {@link tupai.TransitManager#backTo}
+     */
+    backTo: function () {
+        if(!this._transitManager) return;
+        this._transitManager.backTo.apply(this._transitManager, arguments);
+    },
+
+    /**
      * {@link tupai.TransitManager#transitWithHistory}
      */
     transitWithHistory: function () {
         if(!this._transitManager) return;
         this._transitManager.transitWithHistory.apply(this._transitManager, arguments);
+    },
+
+    /**
+     * {@link tupai.TransitManager#getTransitHistories}
+     */
+    getTransitHistories: function () {
+        if(!this._transitManager) return;
+        return this._transitManager.getHistories.apply(this._transitManager, arguments);
     },
 
     /**

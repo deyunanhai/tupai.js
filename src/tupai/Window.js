@@ -71,11 +71,27 @@ Package('tupai')
     },
 
     /**
+     * {@link tupai.TransitManager#backTo}
+     */
+    backTo: function () {
+        if(!this._transitManager) return;
+        this._transitManager.backTo.apply(this._transitManager, arguments);
+    },
+
+    /**
      * {@link tupai.TransitManager#transitWithHistory}
      */
     transitWithHistory: function () {
         if(!this._transitManager) return;
         this._transitManager.transitWithHistory.apply(this._transitManager, arguments);
+    },
+
+    /**
+     * {@link tupai.TransitManager#getTransitHistories}
+     */
+    getTransitHistories: function () {
+        if(!this._transitManager) return;
+        return this._transitManager.getHistories.apply(this._transitManager, arguments);
     },
 
     /**

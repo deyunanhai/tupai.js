@@ -71,8 +71,8 @@ Package('tupai')
 
         return prev;
     },
-    back: function (targetUrl, transitOptions) {
-        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
+    _back: function (prev, transitOptions) {
+        var ret = cp.TransitManager.prototype._back.apply(this, arguments);
         if(ret === 2) { // new transit success
             // need do this window history is really backed.
             // do this will replace the last current url.
