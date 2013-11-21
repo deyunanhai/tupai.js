@@ -110,6 +110,22 @@ Package('tupai')
     },
 
     /**
+     * {@link tupai.TransitManager#getTitle}
+     */
+    getTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.getTitle.apply(this._transitManager, arguments);
+    },
+
+    /**
+     * {@link tupai.TransitManager#setTitle}
+     */
+    setTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.setTitle.apply(this._transitManager, arguments);
+    },
+
+    /**
      * {@link tupai.TransitManager#getTransitHistories}
      */
     getTransitHistories: function () {

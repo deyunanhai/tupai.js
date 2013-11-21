@@ -121,6 +121,7 @@ program
     program
     .command(cmdName + ' <controller|view|template|endpoint> <name>')
     .option('-t, --templateType <templateType>', 'template type')
+    .option('--title <title>', 'view controller title')
     .option('-c, --templateClass <templateClass>', 'template full class name')
     .action(function(type, name, options) {
         if(['controller', 'view', 'template', 'endpoint'].indexOf(type) < 0) {

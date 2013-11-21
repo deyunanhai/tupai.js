@@ -86,6 +86,31 @@ Package('tupai')
     },
 
     /**
+     *  get title by url
+     *  @param {String} url
+     *  @return title
+     */
+    getTitle: function(url) {
+
+        if(typeof url !== 'string') return '';
+        return this._titles[url] || url;
+    },
+
+    /**
+     *  set title with url
+     *  @param {String} url
+     *  @param {String} title
+     *  @return old value
+     */
+    setTitle: function(url, title) {
+
+        if(typeof url !== 'string') return undefined;
+        var old = this._titles[url];
+        this._titles[url] = title;
+        return old;
+    },
+
+    /**
      *  get histories
      *  @return histories
      */

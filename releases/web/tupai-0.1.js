@@ -1741,6 +1741,31 @@ Package('tupai')
     },
 
     /**
+     *  get title by url
+     *  @param {String} url
+     *  @return title
+     */
+    getTitle: function(url) {
+
+        if(typeof url !== 'string') return '';
+        return this._titles[url] || url;
+    },
+
+    /**
+     *  set title with url
+     *  @param {String} url
+     *  @param {String} title
+     *  @return old value
+     */
+    setTitle: function(url, title) {
+
+        if(typeof url !== 'string') return undefined;
+        var old = this._titles[url];
+        this._titles[url] = title;
+        return old;
+    },
+
+    /**
      *  get histories
      *  @return histories
      */
@@ -5150,6 +5175,22 @@ Package('tupai')
         };
         this.fire('transit.did.transitWithHistory', eventParams);
         this.fireDelegate('transit', 'didWindowTransitWithHistory', eventParams);
+    },
+
+    /**
+     * {@link tupai.TransitManager#getTitle}
+     */
+    getTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.getTitle.apply(this._transitManager, arguments);
+    },
+
+    /**
+     * {@link tupai.TransitManager#setTitle}
+     */
+    setTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.setTitle.apply(this._transitManager, arguments);
     },
 
     /**
