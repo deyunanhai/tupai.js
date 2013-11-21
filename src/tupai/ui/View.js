@@ -387,7 +387,7 @@ Package('tupai.ui')
     findViewById: function(id) {
 
         this._checkElement();
-        return this._viewIDMap[id];
+        return (this._viewIDMap && this._viewIDMap[id]);
     },
 
     /**
