@@ -82,7 +82,7 @@ var generateController = function(name, options) {
     createHtmlTemplate(config.htmlTemplate.tarFile, templateSrcFile, templateName);
 
     // add routes
-    addRoutes(config.fullClassName, name);
+    addRoutes(config.fullClassName, name, options.title);
 };
 
 var addCache = function(name) {
@@ -187,7 +187,7 @@ var createHtmlTemplate = function(targetFile, templateFile, name) {
     fs.writeFileSync(targetFile, content);
 }
 
-var addRoutes = function(fullClassName, name) {
+var addRoutes = function(fullClassName, name, title) {
     var routesFile = path.join(tupai.getConfig().configs, 'routes.json');
     console.log('    modify ' + routesFile + ' add ' + fullClassName);
     var routes;
@@ -197,7 +197,14 @@ var addRoutes = function(fullClassName, name) {
     } else {
         routes = {};
     }
-    routes['/' + name] = fullClassName;
+    if(title) {
+        routes['/' + name] = {
+            title: title,
+            classzz: fullClassName
+        };
+    } else {
+        routes['/' + name] = fullClassName;
+    }
     fs.writeFileSync(routesFile, JSON.stringify(routes, null, 4));
 }
 
