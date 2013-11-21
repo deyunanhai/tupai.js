@@ -32,8 +32,12 @@ test('test events',function() {
         events.fire('test1'); // nothing to do
 
         events.fire('test2');
+
+        events.once('test3', event1);
+        events.fire('test3');
+        events.fire('test3');
     });
-    expect(3);
+    expect(4);
 });
 
 test('test delegate',function() {

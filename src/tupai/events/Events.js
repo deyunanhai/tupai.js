@@ -105,7 +105,7 @@ Package('tupai.events')
             for(var i=0,n=chain.length;i<n;i++) {
                 if(!chain[i]) continue;
 
-                chain[i](e);
+                chain[i].apply(this, [e]);
                 if(e.stop) break;
             }
         }
@@ -133,10 +133,11 @@ Package('tupai.events')
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i<n;i++) {
-                if(!chain[i]) continue;
+                var delegate = chain[i];
+                if(!delegate) continue;
 
-                if(chain[i][type]) {
-                    chain[i][type](e);
+                if(delegate[type]) {
+                    delegate[type](e);
                     if(e.stop) break;
                 }
             }
@@ -172,6 +173,30 @@ Package('tupai.events')
         if(first) chain.unshift(listener);
         else chain.push(listener);
         return true;
+    },
+
+    /**
+     * add once event listener
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    once: function(type, listener, first) {
+        if (typeof listener !== 'function')
+            throw TypeError('listener must be a function');
+
+        var fired = false;
+
+        function g() {
+            this.off(type, g);
+
+            if (!fired) {
+                fired = true;
+                listener.apply(this, arguments);
+            }
+        }
+        this.on(type, g, first);
     },
 
     /**

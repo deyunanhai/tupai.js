@@ -1,7 +1,6 @@
 {
-    "/root/sub1": "transit.SubViewController",
-    "/root": "transit.RootViewController",
-    "/root/sub2": "transit.SubViewController",
-    "/detail1": "transit.DetailViewController",
-    "/detail2": "transit.DetailViewController"
+    "/": "transit.NaviViewController",
+    "/tab": "transit.TabViewController",
+    "/tab/sub[0-9]": "transit.SubViewController",
+    "/detail[0-9]": "transit.DetailViewController"
 }

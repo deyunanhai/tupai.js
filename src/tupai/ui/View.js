@@ -84,54 +84,47 @@ Package('tupai.ui')
     },
 
     /**
-     * add event listener.
-     * @param {String} type
-     * @param {Function} listener
-     * @param {Boolean} [first=true] add listener to the first of events pool
-     *
+     * {@link tupai.util.Events#on}
      */
-    on: function(type, listener, first) {
+    on: function() {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.on(type, listener, first);
+        this._events.on.apply(this._events, arguments);
     },
 
     /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.ui.View#on} instead.
-     *
+     * {@link tupai.util.Events#once}
      */
-    addEventListener: function(type, listener, first) {
+    once: function() {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.addEventListener(type, listener, first);
+        this._events.once.apply(this._events, arguments);
     },
 
     /**
-     * remove the listener if exists.
-     * @param {String} type
-     * @param {Function} listener
-     *
+     * {@link tupai.util.Events#addEventListener}
      */
-    off: function(type, listener) {
+    addEventListener: function() {
 
-        if(!this._events) return;
-        this._events.off(type, listener);
+        if(!this._events) this._events = new cp.Events();
+        this._events.addEventListener.apply(this._events, arguments);
     },
 
     /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.ui.View#off} instead.
-     *
+     * {@link tupai.util.Events#off}
      */
-    removeEventListener: function(type, listener) {
+    off: function() {
+
         if(!this._events) return;
-        this._events.removeEventListener(type, listener);
+        this._events.off.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#removeEventListener}
+     */
+    removeEventListener: function() {
+        if(!this._events) return;
+        this._events.removeEventListener.apply(this._events, arguments);
     },
 
     /**
@@ -517,6 +510,9 @@ Package('tupai.ui')
         child._parent = null;
         child._rendered = false;
         child._events = null;
+        if(!child._element) {
+            return;
+        }
         child._element.parentNode.removeChild(child._element);
         if(child.didUnload) {
             child.didUnload();
@@ -561,6 +557,7 @@ Package('tupai.ui')
      *
      */
     getAttribute: function(key) {
+        this._checkElement();
         return this._element.getAttribute(key);
     },
 
@@ -572,6 +569,7 @@ Package('tupai.ui')
      *
      */
     setAttribute: function(key, value) {
+        this._checkElement();
         this._element.setAttribute(key, value);
         return this;
     },
@@ -583,6 +581,7 @@ Package('tupai.ui')
      *
      */
     removeAttribute: function(key) {
+        this._checkElement();
         this._element.removeAttribute(key);
         return this;
     },

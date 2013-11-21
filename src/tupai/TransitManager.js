@@ -35,16 +35,28 @@ Package('tupai')
         }
 
         this._history = [];
+        this._titles = {};
         this._window = windowObject;
+        this._rootController = undefined;
 
         this._controllerRefs = {};
         for (name in routes) {
 
-            var ruleRegExp = name.replace(/\*/g, '\\w*') + '$';
-            var s = name.split('/');
+            var url = name.replace(/\*/g, '\\w*');
+            var ruleRegExp = url + '$';
 
+            var config = routes[name];
+            var classzz;
+            if(typeof config === 'string') {
+                classzz = config;
+            } else if(typeof config === 'function') {
+                classzz = config;
+            } else {
+                classzz = config.classzz;
+                this._titles[url] = config.title;
+            }
             this._controllerRefs[ruleRegExp] = {
-                classzz: routes[name]
+                classzz: classzz
             };
         }
     },
@@ -64,7 +76,7 @@ Package('tupai')
                     } else if(typeof(classzz) === 'function') {
                         controllerRef.instance = new controllerRef.classzz(this._window);
                     } else {
-                        throw new Error('cannot create view controller.' + classzz);
+                        throw new Error('cannot create view controller['+classzz+']');
                     }
                 }
                 return controllerRef.instance;
@@ -78,7 +90,32 @@ Package('tupai')
      *  @return histories
      */
     getHistories: function() {
-        return this._history;
+        var ret = [];
+        for(var i=0, n=this._history.length; i<n; i++) {
+            var h = this._history[i];
+            var title = this._titles[h.url] || h.url;
+            ret.push({
+                backToIndex: n-i,
+                url: h.url,
+                options: h.options,
+                transitOptions: h.transitOptions,
+                title: title
+            });
+        }
+
+        var c = this._current;
+        if(c) {
+            var title = this._titles[c.url] || c.url;
+            ret.push({
+                backToIndex: 0,
+                isCurrent: true,
+                url: c.url,
+                options: c.options,
+                transitOptions: c.transitOptions,
+                title: title
+            });
+        }
+        return ret;
     },
 
     size: function() {
@@ -121,22 +158,26 @@ Package('tupai')
      * @param {String} [targetUrl]
      *   back to targetUrl, if the targetUrl is not in the stack,
      *   will be clear stack and transit the targetUrl
+     * @param {Object} [options] ViewController options, used by new transit only.
      * @param {Object} [transitOptions]
      *  @return 0: failed, 1: back success, 2: new transit success
      */
-    back: function (targetUrl, transitOptions) {
+    back: function (targetUrl, options, transitOptions) {
         var prev;
-        var isNew=false;
         if (targetUrl) {
             prev = this._removeUntil(targetUrl);
             if(!prev) {
-                isNew = true;
-                prev = {url: targetUrl};
+                transitOptions = transitOptions || {};
+                transitOptions.newTransit = true;
+                prev = {
+                    url: targetUrl,
+                    options: options
+                };
             }
         } else {
             prev = this._history.pop();
         }
-        return this._back(prev, transitOptions, isNew);
+        return this._back(prev, transitOptions);
     },
 
     /**
@@ -146,6 +187,7 @@ Package('tupai')
      */
     backTo: function(index) {
 
+        //console.log('backTo ' + index);
         if(index < 1 || index > this._history.length) return 0;
         var prev;
         while(index>0) {
@@ -155,7 +197,7 @@ Package('tupai')
         return this._back(prev);
     },
 
-    _back: function(prev, transitOptions, isNew) {
+    _back: function(prev, transitOptions) {
         if (!prev) return 0;
         var url = prev.url;
 
@@ -168,7 +210,7 @@ Package('tupai')
         var result = this._transit(url, options, transitOptions);
         this._current = prev;
         if(result) {
-            return isNew?2:1;
+            return transitOptions.newTransit?2:1;
         } else {
             return 0;
         }
@@ -271,23 +313,48 @@ Package('tupai')
             // should show 404 page?
             return false;
         }
-        var rootController = (route.root ? this._getController(route.root) : this._window);
-        var rootUrl = route.root;
-        transitOptions = transitOptions || {};
-        for (var i = 0, n = route.path.length; i < n; i++) {
-            var r = route.path[i];
-            var controllerUrl = rootUrl + '/' + r;
-            var controller = this._getController(controllerUrl);
 
+        var pController = (route.root ? this._getController(route.root) : this._window);
+        var pUrl = route.root;
+        transitOptions = transitOptions || {};
+
+        var initController = function(controller) {
             if(controller) {
                 (controller.viewInit && controller.viewInit(options, url, r));
             }
-            if(!rootController.transitController) throw new Error('root controller must have transitController delegate function. ' + url);
-            rootController.transitController(controller, controllerUrl, options, transitOptions);
+            if(!pController.transitController)
+                throw new Error('container controller must have transitController delegate function. ' + url);
+
+            pController.transitController(controller, controllerUrl, options, transitOptions);
+        };
+
+        // controller for /
+        if(pUrl === '') {
+            var rootController = this._rootController;
+            if(rootController === undefined) {
+                this._rootController = rootController = this._getController('/');
+                if(!rootController) {
+                    this._rootController = null; // don't find it twice
+                } else {
+                    initController(rootController);
+                    pController = rootController;
+                }
+            } else if(rootController) {
+                pController = rootController;
+            }
+        }
+
+        for (var i = 0, n = route.path.length; i < n; i++) {
+            var r = route.path[i];
+            var controllerUrl = pUrl + '/' + r;
+            var controller = this._getController(controllerUrl);
+
+            // show 404 in parent controller that controller is null
+            initController(controller);
 
             if(!controller) break;
-            rootController = controller;
-            rootUrl = controllerUrl;
+            pController = controller;
+            pUrl = controllerUrl;
         }
 
         this._current = {

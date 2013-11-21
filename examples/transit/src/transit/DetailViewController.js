@@ -27,8 +27,8 @@ Package('transit')
         if(btnBackRoot) {
             var THIS = this;
             btnBackRoot.bind('click', function() {
-                //THIS._window.back('/root/sub1');
-                THIS._window._transitManager.back('/root/sub1', {info: 'back from details'});
+                //THIS._window.back('/tab/sub1');
+                THIS._window.back('/tab/sub1', {info: 'back from details'});
             });
         }
     },

@@ -366,7 +366,7 @@ Package('tupai.events')
             for(var i=0,n=chain.length;i<n;i++) {
                 if(!chain[i]) continue;
 
-                chain[i](e);
+                chain[i].apply(this, [e]);
                 if(e.stop) break;
             }
         }
@@ -394,10 +394,11 @@ Package('tupai.events')
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i<n;i++) {
-                if(!chain[i]) continue;
+                var delegate = chain[i];
+                if(!delegate) continue;
 
-                if(chain[i][type]) {
-                    chain[i][type](e);
+                if(delegate[type]) {
+                    delegate[type](e);
                     if(e.stop) break;
                 }
             }
@@ -433,6 +434,30 @@ Package('tupai.events')
         if(first) chain.unshift(listener);
         else chain.push(listener);
         return true;
+    },
+
+    /**
+     * add once event listener
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    once: function(type, listener, first) {
+        if (typeof listener !== 'function')
+            throw TypeError('listener must be a function');
+
+        var fired = false;
+
+        function g() {
+            this.off(type, g);
+
+            if (!fired) {
+                fired = true;
+                listener.apply(this, arguments);
+            }
+        }
+        this.on(type, g, first);
     },
 
     /**
@@ -1351,305 +1376,6 @@ Package('tupai.util')
     };
 });
 /**
- * @class   tupai.TransitManager
- * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
- * @since tupai.js 0.1
- *
- * you can use this class to transit ViewController by url.
- *
- * you can initialize this Class by create Window use Config.
- * ### example (also see examples/twitter)
- *     new cp.Window({
- *         routes: {
- *             // call window.tansit('/root') will be show RootViewController
- *             '/root' : cp.RootViewController,
- *             // call window.tansit('/root/sub') will be show RootViewController and call RootViewController's transitController to show SubViewController.
- *             '/root/sub' : cp.SubViewController
- *         }
- *     })
- *
- * ### example
- *      var app = cp.ThisApplication.instance;
- *      var win = app.getWindow();
- *      win.transitWithHistory('/root', {hoge: 'hoge'});
- *
- */
-Package('tupai')
-.use('tupai.util.HashUtil')
-.define('TransitManager', function (cp) { return Package.Class.extend({
-    _delegate: undefined,
-    initialize : function (windowObject, routes) {
-        var name, i;
-
-        if(!routes) {
-            throw new Error('missing transit_rules.');
-        }
-
-        this._history = [];
-        this._window = windowObject;
-
-        this._controllerRefs = {};
-        for (name in routes) {
-
-            var ruleRegExp = name.replace(/\*/g, '\\w*') + '$';
-            var s = name.split('/');
-
-            this._controllerRefs[ruleRegExp] = {
-                classzz: routes[name]
-            };
-        }
-    },
-    setDelegate: function (delegate) {
-        this._delegate = delegate;
-    },
-    _getController: function (url) {
-        var route, controllerRef;
-        for (route in this._controllerRefs) {
-            if (url.match(route)) {
-                controllerRef = this._controllerRefs[route];
-                if (!controllerRef.instance) {
-                    var classzz = controllerRef.classzz;
-                    if(typeof(classzz) === 'string') {
-                        var classPoint = Package.Class.forName(classzz);
-                        controllerRef.instance = new classPoint(this._window);
-                    } else if(typeof(classzz) === 'function') {
-                        controllerRef.instance = new controllerRef.classzz(this._window);
-                    } else {
-                        throw new Error('cannot create view controller.' + classzz);
-                    }
-                }
-                return controllerRef.instance;
-            }
-        }
-        return undefined;
-    },
-
-    /**
-     *  get histories
-     *  @return histories
-     */
-    getHistories: function() {
-        return this._history;
-    },
-
-    size: function() {
-        return this._history.length;
-    },
-    lastIndexOf: function(targetUrl) {
-        if(!targetUrl) return -1;
-        var h = this._history;
-        for(var i=h.length-1; i>=0; i--) {
-            if(h[i].url == targetUrl) {
-                return i;
-            }
-        }
-        return -1;
-    },
-    indexOf: function(targetUrl) {
-        if(!targetUrl) return -1;
-        var h = this._history;
-        for(var i=0, n=h.length; i<n; i++) {
-            if(h[i].url == targetUrl) {
-                return i;
-            }
-        }
-        return -1;
-    },
-    _removeUntil: function(targetUrl) {
-        if(!targetUrl) return;
-        var prev;
-        do {
-            prev = this._history.pop();
-            if (!prev || prev.url == targetUrl) {
-                break;
-            }
-        } while (1);
-        return prev;
-    },
-
-    /**
-     * back to previos ViewController
-     * @param {String} [targetUrl]
-     *   back to targetUrl, if the targetUrl is not in the stack,
-     *   will be clear stack and transit the targetUrl
-     * @param {Object} [transitOptions]
-     *  @return 0: failed, 1: back success, 2: new transit success
-     */
-    back: function (targetUrl, transitOptions) {
-        var prev;
-        var isNew=false;
-        if (targetUrl) {
-            prev = this._removeUntil(targetUrl);
-            if(!prev) {
-                isNew = true;
-                prev = {url: targetUrl};
-            }
-        } else {
-            prev = this._history.pop();
-        }
-        return this._back(prev, transitOptions, isNew);
-    },
-
-    /**
-     * back to a specific URL from the history list.
-     * @param {String} index must be positive number
-     * @return 0: failed, 1: back success
-     */
-    backTo: function(index) {
-
-        if(index < 1 || index > this._history.length) return 0;
-        var prev;
-        while(index>0) {
-            prev = this._history.pop();
-            index --;
-        }
-        return this._back(prev);
-    },
-
-    _back: function(prev, transitOptions, isNew) {
-        if (!prev) return 0;
-        var url = prev.url;
-
-        var options = prev.options;
-        //var current = this._current;
-
-        transitOptions = transitOptions || {};
-        transitOptions.transitType = 2; // back
-        //console.log('back to ' + url);
-        var result = this._transit(url, options, transitOptions);
-        this._current = prev;
-        if(result) {
-            return isNew?2:1;
-        } else {
-            return 0;
-        }
-    },
-
-    /**
-     * transit the url and put current to stack.
-     * @param {String} url ViewController url
-     * @param {Object} [options] ViewController options
-     * @param {Object} [transitOptions]
-     */
-    transitWithHistory: function (url, options, transitOptions) {
-        if (!this._current) throw new Error('can\'t transit with history.');
-
-        transitOptions = transitOptions || {};
-        transitOptions.transitType = 1; // transit
-
-        var current = this._current;
-        if (this._transit(url, options, transitOptions)) {
-            this._history.push(current);
-            return true;
-        } else {
-            return false;
-        }
-    },
-    _currentRoute: undefined,
-    _current: undefined,
-    _computeTransitRoute: function (url) {
-        if (!url || url.length < 1) return null;
-        var route = url.replace(/(^\s+)|((\/|\s)+$)/g, '').split('/');
-        if (route.length < 2) return null;
-
-        var currentRoute = this._currentRoute;
-        this._currentRoute = route;
-
-        if (!currentRoute) {
-            return {
-                root: route[0],
-                path: route.slice(1)
-            };
-        }
-
-        var n = currentRoute.length > route.length ? route.length : currentRoute.length;
-        if (n === 0) {
-            return null;
-        }
-
-        var i=1;
-        for (;i<n;i++) {
-            if (currentRoute[i] != route[i]) {
-                break;
-            }
-        }
-        if (i == n && currentRoute.length == route.length) {
-            return {
-                root: route.slice(0, route.length-1).join('/'),
-                path: route.slice(route.length-1)
-            }; // same route
-        }
-
-        return {
-            root: route.slice(0,i).join('/'),
-            path: route.slice(i)
-        };
-    },
-
-    /**
-     * transit the url
-     * if you want to tansit with history please see {@link tupai.TransitManager#transitWithHistory}
-     * @param {String} url ViewController url
-     * @param {Object} [options] ViewController options
-     * @param {Object} [transitOptions]
-     */
-    transit: function (url, options, transitOptions) {
-        url = url || '/root';
-        return this._transit(url, options, transitOptions);
-    },
-    _transit: function (url, options, transitOptions) {
-    //console.log('tansit ' + url + ',options=' + JSON.stringify(options));
-/*
-        console.log(JSON.stringify(this._computeTransitRoute('/')));
-        console.log(JSON.stringify(this._computeTransitRoute('/root')));
-        console.log(JSON.stringify(this._computeTransitRoute('/root/aa')));
-        console.log(JSON.stringify(this._computeTransitRoute('/root/aa')));
-        console.log(JSON.stringify(this._computeTransitRoute('/root/aa/bb')));
-        console.log(JSON.stringify(this._computeTransitRoute('/root/cc/dd')));
-        console.log(JSON.stringify(this._computeTransitRoute('/dd/cc/dd')));
-*/
-
-        options = options || {}; // make sure the options is not null
-        if (this._current &&
-            this._current.url == url &&
-            cp.HashUtil.equals(this._current.options, options)) {
-            //console.log('skip this transit');
-            return false;
-        }
-
-        var route = this._computeTransitRoute(url);
-        if (route == null) {
-            // should show 404 page?
-            return false;
-        }
-        var rootController = (route.root ? this._getController(route.root) : this._window);
-        var rootUrl = route.root;
-        transitOptions = transitOptions || {};
-        for (var i = 0, n = route.path.length; i < n; i++) {
-            var r = route.path[i];
-            var controllerUrl = rootUrl + '/' + r;
-            var controller = this._getController(controllerUrl);
-
-            if(controller) {
-                (controller.viewInit && controller.viewInit(options, url, r));
-            }
-            if(!rootController.transitController) throw new Error('root controller must have transitController delegate function. ' + url);
-            rootController.transitController(controller, controllerUrl, options, transitOptions);
-
-            if(!controller) break;
-            rootController = controller;
-            rootUrl = controllerUrl;
-        }
-
-        this._current = {
-            url : url,
-            options : options
-        };
-        return true;
-    }
-});});
-/**
  * @class   tupai.ui.TemplateEngine
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -1928,6 +1654,372 @@ Package('tupai.ui')
     };
 });
 /**
+ * @class   tupai.TransitManager
+ * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
+ * @since tupai.js 0.1
+ *
+ * you can use this class to transit ViewController by url.
+ *
+ * you can initialize this Class by create Window use Config.
+ * ### example (also see examples/twitter)
+ *     new cp.Window({
+ *         routes: {
+ *             // call window.tansit('/root') will be show RootViewController
+ *             '/root' : cp.RootViewController,
+ *             // call window.tansit('/root/sub') will be show RootViewController and call RootViewController's transitController to show SubViewController.
+ *             '/root/sub' : cp.SubViewController
+ *         }
+ *     })
+ *
+ * ### example
+ *      var app = cp.ThisApplication.instance;
+ *      var win = app.getWindow();
+ *      win.transitWithHistory('/root', {hoge: 'hoge'});
+ *
+ */
+Package('tupai')
+.use('tupai.util.HashUtil')
+.define('TransitManager', function (cp) { return Package.Class.extend({
+    _delegate: undefined,
+    initialize : function (windowObject, routes) {
+        var name, i;
+
+        if(!routes) {
+            throw new Error('missing transit_rules.');
+        }
+
+        this._history = [];
+        this._titles = {};
+        this._window = windowObject;
+        this._rootController = undefined;
+
+        this._controllerRefs = {};
+        for (name in routes) {
+
+            var url = name.replace(/\*/g, '\\w*');
+            var ruleRegExp = url + '$';
+
+            var config = routes[name];
+            var classzz;
+            if(typeof config === 'string') {
+                classzz = config;
+            } else if(typeof config === 'function') {
+                classzz = config;
+            } else {
+                classzz = config.classzz;
+                this._titles[url] = config.title;
+            }
+            this._controllerRefs[ruleRegExp] = {
+                classzz: classzz
+            };
+        }
+    },
+    setDelegate: function (delegate) {
+        this._delegate = delegate;
+    },
+    _getController: function (url) {
+        var route, controllerRef;
+        for (route in this._controllerRefs) {
+            if (url.match(route)) {
+                controllerRef = this._controllerRefs[route];
+                if (!controllerRef.instance) {
+                    var classzz = controllerRef.classzz;
+                    if(typeof(classzz) === 'string') {
+                        var classPoint = Package.Class.forName(classzz);
+                        controllerRef.instance = new classPoint(this._window);
+                    } else if(typeof(classzz) === 'function') {
+                        controllerRef.instance = new controllerRef.classzz(this._window);
+                    } else {
+                        throw new Error('cannot create view controller['+classzz+']');
+                    }
+                }
+                return controllerRef.instance;
+            }
+        }
+        return undefined;
+    },
+
+    /**
+     *  get histories
+     *  @return histories
+     */
+    getHistories: function() {
+        var ret = [];
+        for(var i=0, n=this._history.length; i<n; i++) {
+            var h = this._history[i];
+            var title = this._titles[h.url] || h.url;
+            ret.push({
+                backToIndex: n-i,
+                url: h.url,
+                options: h.options,
+                transitOptions: h.transitOptions,
+                title: title
+            });
+        }
+
+        var c = this._current;
+        if(c) {
+            var title = this._titles[c.url] || c.url;
+            ret.push({
+                backToIndex: 0,
+                isCurrent: true,
+                url: c.url,
+                options: c.options,
+                transitOptions: c.transitOptions,
+                title: title
+            });
+        }
+        return ret;
+    },
+
+    size: function() {
+        return this._history.length;
+    },
+    lastIndexOf: function(targetUrl) {
+        if(!targetUrl) return -1;
+        var h = this._history;
+        for(var i=h.length-1; i>=0; i--) {
+            if(h[i].url == targetUrl) {
+                return i;
+            }
+        }
+        return -1;
+    },
+    indexOf: function(targetUrl) {
+        if(!targetUrl) return -1;
+        var h = this._history;
+        for(var i=0, n=h.length; i<n; i++) {
+            if(h[i].url == targetUrl) {
+                return i;
+            }
+        }
+        return -1;
+    },
+    _removeUntil: function(targetUrl) {
+        if(!targetUrl) return;
+        var prev;
+        do {
+            prev = this._history.pop();
+            if (!prev || prev.url == targetUrl) {
+                break;
+            }
+        } while (1);
+        return prev;
+    },
+
+    /**
+     * back to previos ViewController
+     * @param {String} [targetUrl]
+     *   back to targetUrl, if the targetUrl is not in the stack,
+     *   will be clear stack and transit the targetUrl
+     * @param {Object} [options] ViewController options, used by new transit only.
+     * @param {Object} [transitOptions]
+     *  @return 0: failed, 1: back success, 2: new transit success
+     */
+    back: function (targetUrl, options, transitOptions) {
+        var prev;
+        if (targetUrl) {
+            prev = this._removeUntil(targetUrl);
+            if(!prev) {
+                transitOptions = transitOptions || {};
+                transitOptions.newTransit = true;
+                prev = {
+                    url: targetUrl,
+                    options: options
+                };
+            }
+        } else {
+            prev = this._history.pop();
+        }
+        return this._back(prev, transitOptions);
+    },
+
+    /**
+     * back to a specific URL from the history list.
+     * @param {String} index must be positive number
+     * @return 0: failed, 1: back success
+     */
+    backTo: function(index) {
+
+        //console.log('backTo ' + index);
+        if(index < 1 || index > this._history.length) return 0;
+        var prev;
+        while(index>0) {
+            prev = this._history.pop();
+            index --;
+        }
+        return this._back(prev);
+    },
+
+    _back: function(prev, transitOptions) {
+        if (!prev) return 0;
+        var url = prev.url;
+
+        var options = prev.options;
+        //var current = this._current;
+
+        transitOptions = transitOptions || {};
+        transitOptions.transitType = 2; // back
+        //console.log('back to ' + url);
+        var result = this._transit(url, options, transitOptions);
+        this._current = prev;
+        if(result) {
+            return transitOptions.newTransit?2:1;
+        } else {
+            return 0;
+        }
+    },
+
+    /**
+     * transit the url and put current to stack.
+     * @param {String} url ViewController url
+     * @param {Object} [options] ViewController options
+     * @param {Object} [transitOptions]
+     */
+    transitWithHistory: function (url, options, transitOptions) {
+        if (!this._current) throw new Error('can\'t transit with history.');
+
+        transitOptions = transitOptions || {};
+        transitOptions.transitType = 1; // transit
+
+        var current = this._current;
+        if (this._transit(url, options, transitOptions)) {
+            this._history.push(current);
+            return true;
+        } else {
+            return false;
+        }
+    },
+    _currentRoute: undefined,
+    _current: undefined,
+    _computeTransitRoute: function (url) {
+        if (!url || url.length < 1) return null;
+        var route = url.replace(/(^\s+)|((\/|\s)+$)/g, '').split('/');
+        if (route.length < 2) return null;
+
+        var currentRoute = this._currentRoute;
+        this._currentRoute = route;
+
+        if (!currentRoute) {
+            return {
+                root: route[0],
+                path: route.slice(1)
+            };
+        }
+
+        var n = currentRoute.length > route.length ? route.length : currentRoute.length;
+        if (n === 0) {
+            return null;
+        }
+
+        var i=1;
+        for (;i<n;i++) {
+            if (currentRoute[i] != route[i]) {
+                break;
+            }
+        }
+        if (i == n && currentRoute.length == route.length) {
+            return {
+                root: route.slice(0, route.length-1).join('/'),
+                path: route.slice(route.length-1)
+            }; // same route
+        }
+
+        return {
+            root: route.slice(0,i).join('/'),
+            path: route.slice(i)
+        };
+    },
+
+    /**
+     * transit the url
+     * if you want to tansit with history please see {@link tupai.TransitManager#transitWithHistory}
+     * @param {String} url ViewController url
+     * @param {Object} [options] ViewController options
+     * @param {Object} [transitOptions]
+     */
+    transit: function (url, options, transitOptions) {
+        url = url || '/root';
+        return this._transit(url, options, transitOptions);
+    },
+    _transit: function (url, options, transitOptions) {
+    //console.log('tansit ' + url + ',options=' + JSON.stringify(options));
+/*
+        console.log(JSON.stringify(this._computeTransitRoute('/')));
+        console.log(JSON.stringify(this._computeTransitRoute('/root')));
+        console.log(JSON.stringify(this._computeTransitRoute('/root/aa')));
+        console.log(JSON.stringify(this._computeTransitRoute('/root/aa')));
+        console.log(JSON.stringify(this._computeTransitRoute('/root/aa/bb')));
+        console.log(JSON.stringify(this._computeTransitRoute('/root/cc/dd')));
+        console.log(JSON.stringify(this._computeTransitRoute('/dd/cc/dd')));
+*/
+
+        options = options || {}; // make sure the options is not null
+        if (this._current &&
+            this._current.url == url &&
+            cp.HashUtil.equals(this._current.options, options)) {
+            //console.log('skip this transit');
+            return false;
+        }
+
+        var route = this._computeTransitRoute(url);
+        if (route == null) {
+            // should show 404 page?
+            return false;
+        }
+
+        var pController = (route.root ? this._getController(route.root) : this._window);
+        var pUrl = route.root;
+        transitOptions = transitOptions || {};
+
+        var initController = function(controller) {
+            if(controller) {
+                (controller.viewInit && controller.viewInit(options, url, r));
+            }
+            if(!pController.transitController)
+                throw new Error('container controller must have transitController delegate function. ' + url);
+
+            pController.transitController(controller, controllerUrl, options, transitOptions);
+        };
+
+        // controller for /
+        if(pUrl === '') {
+            var rootController = this._rootController;
+            if(rootController === undefined) {
+                this._rootController = rootController = this._getController('/');
+                if(!rootController) {
+                    this._rootController = null; // don't find it twice
+                } else {
+                    initController(rootController);
+                    pController = rootController;
+                }
+            } else if(rootController) {
+                pController = rootController;
+            }
+        }
+
+        for (var i = 0, n = route.path.length; i < n; i++) {
+            var r = route.path[i];
+            var controllerUrl = pUrl + '/' + r;
+            var controller = this._getController(controllerUrl);
+
+            // show 404 in parent controller that controller is null
+            initController(controller);
+
+            if(!controller) break;
+            pController = controller;
+            pUrl = controllerUrl;
+        }
+
+        this._current = {
+            url : url,
+            options : options
+        };
+        return true;
+    }
+});});
+/**
  * @class   tupai.PushStateTransitManager
  * @author <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
  * @docauthor <a href='bocelli.hu@gmail.com'>bocelli.hu</a>
@@ -1959,13 +2051,20 @@ Package('tupai')
         this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
         var THIS = this;
+        this._popEventHanlder=undefined;
         window.addEventListener("popstate", function(jsevent) {
-            if(THIS._stopPopStateEventStatus) return;
-            console.log(jsevent);
+            //console.log(jsevent);
             var state = jsevent.state;
             if(!state) return;
             var url = state.url;
             if(!url) return;
+
+            var hanlder = THIS._popEventHanlder;
+            if(hanlder) {
+                delete THIS._popEventHanlder;
+                hanlder();
+                return;
+            }
 
             THIS._history = state.history || [];
             THIS._transit(
@@ -1974,50 +2073,59 @@ Package('tupai')
                 state.transitOptions);
         });
     },
-    _enterStopPopStateEvent: function() {
-        if(!this._stopPopStateEventStatus) {
-            this._stopPopStateEventStatus = 1;
-        } else {
-            this._stopPopStateEventStatus++;
-        }
-        //console.log("_entry " + this._stopPopStateEventStatus);
-    },
-    _exitStopPopStateEvent: function() {
-        //console.log("_exit");
-        if(this._stopPopStateEventStatus) this._stopPopStateEventStatus--;
-    },
-    _removeUntil: function(targetUrl) {
-        if(!targetUrl) return;
-        var index = this.lastIndexOf(targetUrl);
-        if(index < 0) {
-            this._history.length = 0;
-            return;
-        }
-        var bi = this.size() - index;
-        var prev = cp.TransitManager.prototype._removeUntil.apply(this, arguments);
+    back: function (targetUrl, options, transitOptions) {
 
-        this._enterStopPopStateEvent();
-        window.history.go(bi*-1);
-        // this can clear forward history. but will push two same state ........
-        //window.history.pushState("","","");
-        this._exitStopPopStateEvent();
+        this._lastSize = this.size();
+        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
+        return ret;
+    },
+    backTo: function (targetUrl, options, transitOptions) {
 
-        return prev;
+        this._lastSize = this.size();
+        var ret = cp.TransitManager.prototype.backTo.apply(this, arguments);
+        return ret;
     },
     _back: function (prev, transitOptions) {
-        var ret = cp.TransitManager.prototype._back.apply(this, arguments);
-        if(ret === 2) { // new transit success
-            // need do this window history is really backed.
-            // do this will replace the last current url.
-            this._enterStopPopStateEvent();
-            window.history.replaceState({
-                url: this._current.url,
-                options: this._current.options,
-                transitOptions: this._current.transitOptions,
-                history: this._history
-            }, "", this._createUrl(this._current.url, this._current.options));
-            this._exitStopPopStateEvent();
+
+        //console.log('_back ' + JSON.stringify(prev) + ', ' + JSON.stringify(transitOptions));
+        if(!prev) return 0;
+
+        var THIS = this;
+        var superFunc = function() {
+            var ret = cp.TransitManager.prototype._back.apply(
+                THIS,
+                [ prev, transitOptions ]
+            );
+            THIS._replaceState();
+            return ret;
+        };
+
+        var off = this.size()-this._lastSize;
+        //console.log('off= ' + off + ', lastSize=' + this._lastSize + ', size=' + this.size());
+        var isNew = transitOptions && transitOptions.newTransit;
+        if(isNew) {
+            if(off === 0) {
+                return superFunc();
+            }
+        } else {
+            window.history.go(off);
+            return 1;
         }
+
+        this._popEventHanlder = function() {
+            superFunc();
+        };
+        window.history.go(off);
+
+        return isNew?2:1;
+    },
+    _replaceState: function() {
+        window.history.replaceState({
+            url: this._current.url,
+            options: this._current.options,
+            transitOptions: this._current.transitOptions,
+            history: this._history
+        }, "", this._createUrl(this._current.url, this._current.options));
     },
     transitWithHistory: function (url, options, transitOptions) {
         var result = cp.TransitManager.prototype.transitWithHistory.apply(this, arguments);
@@ -2069,12 +2177,7 @@ Package('tupai')
         }
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
-            window.history.replaceState({
-                url: this._current.url,
-                options: this._current.options,
-                transitOptions: this._current.transitOptions,
-                history: this._history
-            }, "", this._createUrl(url, options));
+            this._replaceState();
         }
         return result;
     }
@@ -3345,54 +3448,47 @@ Package('tupai.ui')
     },
 
     /**
-     * add event listener.
-     * @param {String} type
-     * @param {Function} listener
-     * @param {Boolean} [first=true] add listener to the first of events pool
-     *
+     * {@link tupai.util.Events#on}
      */
-    on: function(type, listener, first) {
+    on: function() {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.on(type, listener, first);
+        this._events.on.apply(this._events, arguments);
     },
 
     /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-    *  @deprecated 0.4 Use {@link tupai.ui.View#on} instead.
-     *
+     * {@link tupai.util.Events#once}
      */
-    addEventListener: function(type, listener, first) {
+    once: function() {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.addEventListener(type, listener, first);
+        this._events.once.apply(this._events, arguments);
     },
 
     /**
-     * remove the listener if exists.
-     * @param {String} type
-     * @param {Function} listener
-     *
+     * {@link tupai.util.Events#addEventListener}
      */
-    off: function(type, listener) {
+    addEventListener: function() {
 
-        if(!this._events) return;
-        this._events.off(type, listener);
+        if(!this._events) this._events = new cp.Events();
+        this._events.addEventListener.apply(this._events, arguments);
     },
 
     /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-    *  @deprecated 0.4 Use {@link tupai.ui.View#off} instead.
-     *
+     * {@link tupai.util.Events#off}
      */
-    removeEventListener: function(type, listener) {
+    off: function() {
+
         if(!this._events) return;
-        this._events.removeEventListener(type, listener);
+        this._events.off.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#removeEventListener}
+     */
+    removeEventListener: function() {
+        if(!this._events) return;
+        this._events.removeEventListener.apply(this._events, arguments);
     },
 
     /**
@@ -3778,6 +3874,9 @@ Package('tupai.ui')
         child._parent = null;
         child._rendered = false;
         child._events = null;
+        if(!child._element) {
+            return;
+        }
         child._element.parentNode.removeChild(child._element);
         if(child.didUnload) {
             child.didUnload();
@@ -3822,6 +3921,7 @@ Package('tupai.ui')
      *
      */
     getAttribute: function(key) {
+        this._checkElement();
         return this._element.getAttribute(key);
     },
 
@@ -3833,6 +3933,7 @@ Package('tupai.ui')
      *
      */
     setAttribute: function(key, value) {
+        this._checkElement();
         this._element.setAttribute(key, value);
         return this;
     },
@@ -3844,6 +3945,7 @@ Package('tupai.ui')
      *
      */
     removeAttribute: function(key) {
+        this._checkElement();
         this._element.removeAttribute(key);
         return this;
     },
@@ -4954,7 +5056,7 @@ Package('tupai.model')
  *     </body>
  */
 Package('tupai')
-.use('tupai.TransitManager')
+.use('tupai.events.Events')
 .use('tupai.ui.View')
 .use('tupai.TransitManager')
 .use('tupai.PushStateTransitManager')
@@ -4982,6 +5084,7 @@ Package('tupai')
 		cp.View.prototype.initialize.apply(this,[]);
 
         this._config = config || {};
+        this._events = new cp.Events();
         if(this._config.routes) {
             if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
@@ -5006,25 +5109,47 @@ Package('tupai')
     /**
      * {@link tupai.TransitManager#back}
      */
-    back: function () {
+    back: function (targetUrl, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.back.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            targetUrl: targetUrl,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.back', eventParams);
+        this.fireDelegate('transit', 'didWindowBack', eventParams);
     },
 
     /**
      * {@link tupai.TransitManager#backTo}
      */
-    backTo: function () {
+    backTo: function(index) {
         if(!this._transitManager) return;
         this._transitManager.backTo.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            index: index
+        };
+        this.fire('transit.did.backTo', eventParams);
+        this.fireDelegate('transit', 'didWindowBackTo', eventParams);
     },
 
     /**
      * {@link tupai.TransitManager#transitWithHistory}
      */
-    transitWithHistory: function () {
+    transitWithHistory: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transitWithHistory.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transitWithHistory', eventParams);
+        this.fireDelegate('transit', 'didWindowTransitWithHistory', eventParams);
     },
 
     /**
@@ -5038,9 +5163,17 @@ Package('tupai')
     /**
      * {@link tupai.TransitManager#transit}
      */
-    transit: function () {
+    transit: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transit.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transit', eventParams);
+        this.fireDelegate('transit', 'didWindowTransit', eventParams);
     },
 
     /**
@@ -5071,6 +5204,15 @@ Package('tupai')
             if(!view) throw new Error('cannot get contentView from ViewController');
             this._displayView(view, transitOptions);
             this._currentController = controller;
+
+            var eventParams = {
+                controller: controller,
+                url: url,
+                options: options,
+                transitOptions: transitOptions
+            };
+            this.fire('transit.did.transitController', eventParams);
+            this.fireDelegate('transit', 'didWindowTransitController', eventParams);
         }
     },
 
@@ -5159,7 +5301,56 @@ Package('tupai')
         if(firsttime) {
             this.didLoad && this.didLoad();
         }
-	}
+	},
+
+    /**
+     * {@link tupai.util.Events#fire}
+     */
+    fire: function() {
+        this._events.fire.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#fireDelegate}
+     */
+    fireDelegate: function() {
+        this._events.fireDelegate.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#on}
+     */
+    on: function() {
+        this._events.on.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#once}
+     */
+    once: function() {
+        this._events.once.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#addEventListener}
+     */
+    addEventListener: function() {
+        this._events.addEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#removeEventListener}
+     */
+    removeEventListener: function() {
+        this._events.removeEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+        this._events.off.apply(this._events, arguments);
+    }
 });});
 
 /**
@@ -5636,63 +5827,52 @@ Package('tupai')
     },
 
     /**
-     * fire application level event
-     * @param type event type
-     * @param parameter event parameter
+     * {@link tupai.util.Events#fire}
      */
-    fire: function(type, parameter) {
-        this._events.fire(type, parameter);
+    fire: function() {
+        this._events.fire.apply(this._events, arguments);
     },
 
     /**
-     * fire application level event
-     * @param type event type
-     * @param parameter event parameter
+     * {@link tupai.util.Events#fireDelegate}
      */
-    fireDelegate: function(type, parameter) {
-        this._events.fireDelegate(type, parameter);
+    fireDelegate: function() {
+        this._events.fireDelegate.apply(this._events, arguments);
     },
 
     /**
-     * add event listener
-     * @param {String} type event type
-     * @param {Object} listener event listener
-     * @param {Boolean} [first] add listener to the top of event pool
+     * {@link tupai.util.Events#on}
      */
-    on: function(type, listener, first) {
-        this._events.on(type, listener, first);
+    on: function() {
+        this._events.on.apply(this._events, arguments);
     },
 
     /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-     *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
-     *
+     * {@link tupai.util.Events#once}
      */
-    addEventListener: function(type, listener, first) {
-        this._events.addEventListener(type, listener, first);
+    once: function() {
+        this._events.once.apply(this._events, arguments);
     },
 
     /**
-     * remove event listener
-     * @param type event type
-     * @param listener which listener to remove
+     * {@link tupai.util.Events#addEventListener}
      */
-    off: function(type, listener) {
-        this._events.off(type, listener);
+    addEventListener: function() {
+        this._events.addEventListener.apply(this._events, arguments);
     },
 
     /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
-     *
+     * {@link tupai.util.Events#removeEventListener}
      */
-    removeEventListener: function(type, listener) {
-        this._events.removeEventListener(type, listener);
+    removeEventListener: function() {
+        this._events.removeEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+        this._events.off.apply(this._events, arguments);
     },
 
     /**

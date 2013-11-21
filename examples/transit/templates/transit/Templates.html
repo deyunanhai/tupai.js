@@ -9,8 +9,21 @@
 </head>
 <body>
 
-<div data-ch-template="template_root">
+<div data-ch-template="template_navi">
+    <div data-ch-id="navbar">
+        <span data-ch-template="navbar_item">
+            <a data-ch-id="item" data-ch-name="item"></a>  |
+        </span>
+        <span data-ch-template="navbar_item_current">
+            <span data-ch-name="item"></span>
+        </span>
+    </div>
+    <hr/>
+    <div data-ch-id="container"></div>
+</div>
+<div data-ch-template="template_tab">
     <div data-ch-name="info"></div>
+    <div data-ch-name="breadcrumbs"></div>
     <input data-ch-id="btnDetail" type="button" value="show_detail">
     <div data-ch-id="container"></div>
     <input data-ch-id="btn1" type="button" value="show_sub1">
@@ -24,7 +37,7 @@
 </div>
 <div data-ch-template="template_detail2">
     detail2
-    <input data-ch-id="btnBackRoot" type="button" value="back to root">
+    <input data-ch-id="btnBackRoot" type="button" value="back to top">
 </div>
 
 <!-- __templates_body__ -->

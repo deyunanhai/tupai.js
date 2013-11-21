@@ -30,13 +30,20 @@ Package('tupai')
         this._separator = (config && config.separator) || "#!";
         var initialURL = location.href;
         var THIS = this;
+        this._popEventHanlder=undefined;
         window.addEventListener("popstate", function(jsevent) {
-            if(THIS._stopPopStateEventStatus) return;
-            console.log(jsevent);
+            //console.log(jsevent);
             var state = jsevent.state;
             if(!state) return;
             var url = state.url;
             if(!url) return;
+
+            var hanlder = THIS._popEventHanlder;
+            if(hanlder) {
+                delete THIS._popEventHanlder;
+                hanlder();
+                return;
+            }
 
             THIS._history = state.history || [];
             THIS._transit(
@@ -45,50 +52,59 @@ Package('tupai')
                 state.transitOptions);
         });
     },
-    _enterStopPopStateEvent: function() {
-        if(!this._stopPopStateEventStatus) {
-            this._stopPopStateEventStatus = 1;
-        } else {
-            this._stopPopStateEventStatus++;
-        }
-        //console.log("_entry " + this._stopPopStateEventStatus);
-    },
-    _exitStopPopStateEvent: function() {
-        //console.log("_exit");
-        if(this._stopPopStateEventStatus) this._stopPopStateEventStatus--;
-    },
-    _removeUntil: function(targetUrl) {
-        if(!targetUrl) return;
-        var index = this.lastIndexOf(targetUrl);
-        if(index < 0) {
-            this._history.length = 0;
-            return;
-        }
-        var bi = this.size() - index;
-        var prev = cp.TransitManager.prototype._removeUntil.apply(this, arguments);
+    back: function (targetUrl, options, transitOptions) {
 
-        this._enterStopPopStateEvent();
-        window.history.go(bi*-1);
-        // this can clear forward history. but will push two same state ........
-        //window.history.pushState("","","");
-        this._exitStopPopStateEvent();
+        this._lastSize = this.size();
+        var ret = cp.TransitManager.prototype.back.apply(this, arguments);
+        return ret;
+    },
+    backTo: function (targetUrl, options, transitOptions) {
 
-        return prev;
+        this._lastSize = this.size();
+        var ret = cp.TransitManager.prototype.backTo.apply(this, arguments);
+        return ret;
     },
     _back: function (prev, transitOptions) {
-        var ret = cp.TransitManager.prototype._back.apply(this, arguments);
-        if(ret === 2) { // new transit success
-            // need do this window history is really backed.
-            // do this will replace the last current url.
-            this._enterStopPopStateEvent();
-            window.history.replaceState({
-                url: this._current.url,
-                options: this._current.options,
-                transitOptions: this._current.transitOptions,
-                history: this._history
-            }, "", this._createUrl(this._current.url, this._current.options));
-            this._exitStopPopStateEvent();
+
+        //console.log('_back ' + JSON.stringify(prev) + ', ' + JSON.stringify(transitOptions));
+        if(!prev) return 0;
+
+        var THIS = this;
+        var superFunc = function() {
+            var ret = cp.TransitManager.prototype._back.apply(
+                THIS,
+                [ prev, transitOptions ]
+            );
+            THIS._replaceState();
+            return ret;
+        };
+
+        var off = this.size()-this._lastSize;
+        //console.log('off= ' + off + ', lastSize=' + this._lastSize + ', size=' + this.size());
+        var isNew = transitOptions && transitOptions.newTransit;
+        if(isNew) {
+            if(off === 0) {
+                return superFunc();
+            }
+        } else {
+            window.history.go(off);
+            return 1;
         }
+
+        this._popEventHanlder = function() {
+            superFunc();
+        };
+        window.history.go(off);
+
+        return isNew?2:1;
+    },
+    _replaceState: function() {
+        window.history.replaceState({
+            url: this._current.url,
+            options: this._current.options,
+            transitOptions: this._current.transitOptions,
+            history: this._history
+        }, "", this._createUrl(this._current.url, this._current.options));
     },
     transitWithHistory: function (url, options, transitOptions) {
         var result = cp.TransitManager.prototype.transitWithHistory.apply(this, arguments);
@@ -140,12 +156,7 @@ Package('tupai')
         }
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
-            window.history.replaceState({
-                url: this._current.url,
-                options: this._current.options,
-                transitOptions: this._current.transitOptions,
-                history: this._history
-            }, "", this._createUrl(url, options));
+            this._replaceState();
         }
         return result;
     }

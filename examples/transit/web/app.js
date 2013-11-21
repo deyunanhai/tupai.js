@@ -13,5 +13,5 @@ Package()
         apiManager: cp.Config['api_manager']
     });
 
-    app.show('/root/sub1');
+    app.show('/tab/sub1');
 });

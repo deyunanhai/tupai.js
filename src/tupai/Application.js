@@ -164,63 +164,52 @@ Package('tupai')
     },
 
     /**
-     * fire application level event
-     * @param type event type
-     * @param parameter event parameter
+     * {@link tupai.util.Events#fire}
      */
-    fire: function(type, parameter) {
-        this._events.fire(type, parameter);
+    fire: function() {
+        this._events.fire.apply(this._events, arguments);
     },
 
     /**
-     * fire application level event
-     * @param type event type
-     * @param parameter event parameter
+     * {@link tupai.util.Events#fireDelegate}
      */
-    fireDelegate: function(type, parameter) {
-        this._events.fireDelegate(type, parameter);
+    fireDelegate: function() {
+        this._events.fireDelegate.apply(this._events, arguments);
     },
 
     /**
-     * add event listener
-     * @param {String} type event type
-     * @param {Object} listener event listener
-     * @param {Boolean} [first] add listener to the top of event pool
+     * {@link tupai.util.Events#on}
      */
-    on: function(type, listener, first) {
-        this._events.on(type, listener, first);
+    on: function() {
+        this._events.on.apply(this._events, arguments);
     },
 
     /**
-     * same as on.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     * @param {boolean} [first=true] add listener to the first of events pool
-     *  @deprecated 0.4 Use {@link tupai.Application#on} instead.
-     *
+     * {@link tupai.util.Events#once}
      */
-    addEventListener: function(type, listener, first) {
-        this._events.addEventListener(type, listener, first);
+    once: function() {
+        this._events.once.apply(this._events, arguments);
     },
 
     /**
-     * remove event listener
-     * @param type event type
-     * @param listener which listener to remove
+     * {@link tupai.util.Events#addEventListener}
      */
-    off: function(type, listener) {
-        this._events.off(type, listener);
+    addEventListener: function() {
+        this._events.addEventListener.apply(this._events, arguments);
     },
 
     /**
-     * same as off.
-     * @param {String} type eventType
-     * @param {Object} listener function or class instance
-     *  @deprecated 0.4 Use {@link tupai.Application#off} instead.
-     *
+     * {@link tupai.util.Events#removeEventListener}
      */
-    removeEventListener: function(type, listener) {
-        this._events.removeEventListener(type, listener);
+    removeEventListener: function() {
+        this._events.removeEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+        this._events.off.apply(this._events, arguments);
     },
 
     /**

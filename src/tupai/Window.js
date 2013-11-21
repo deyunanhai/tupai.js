@@ -13,7 +13,7 @@
  *     </body>
  */
 Package('tupai')
-.use('tupai.TransitManager')
+.use('tupai.events.Events')
 .use('tupai.ui.View')
 .use('tupai.TransitManager')
 .use('tupai.PushStateTransitManager')
@@ -41,6 +41,7 @@ Package('tupai')
 		cp.View.prototype.initialize.apply(this,[]);
 
         this._config = config || {};
+        this._events = new cp.Events();
         if(this._config.routes) {
             if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
@@ -65,25 +66,47 @@ Package('tupai')
     /**
      * {@link tupai.TransitManager#back}
      */
-    back: function () {
+    back: function (targetUrl, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.back.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            targetUrl: targetUrl,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.back', eventParams);
+        this.fireDelegate('transit', 'didWindowBack', eventParams);
     },
 
     /**
      * {@link tupai.TransitManager#backTo}
      */
-    backTo: function () {
+    backTo: function(index) {
         if(!this._transitManager) return;
         this._transitManager.backTo.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            index: index
+        };
+        this.fire('transit.did.backTo', eventParams);
+        this.fireDelegate('transit', 'didWindowBackTo', eventParams);
     },
 
     /**
      * {@link tupai.TransitManager#transitWithHistory}
      */
-    transitWithHistory: function () {
+    transitWithHistory: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transitWithHistory.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transitWithHistory', eventParams);
+        this.fireDelegate('transit', 'didWindowTransitWithHistory', eventParams);
     },
 
     /**
@@ -97,9 +120,17 @@ Package('tupai')
     /**
      * {@link tupai.TransitManager#transit}
      */
-    transit: function () {
+    transit: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transit.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transit', eventParams);
+        this.fireDelegate('transit', 'didWindowTransit', eventParams);
     },
 
     /**
@@ -130,6 +161,15 @@ Package('tupai')
             if(!view) throw new Error('cannot get contentView from ViewController');
             this._displayView(view, transitOptions);
             this._currentController = controller;
+
+            var eventParams = {
+                controller: controller,
+                url: url,
+                options: options,
+                transitOptions: transitOptions
+            };
+            this.fire('transit.did.transitController', eventParams);
+            this.fireDelegate('transit', 'didWindowTransitController', eventParams);
         }
     },
 
@@ -218,6 +258,55 @@ Package('tupai')
         if(firsttime) {
             this.didLoad && this.didLoad();
         }
-	}
+	},
+
+    /**
+     * {@link tupai.util.Events#fire}
+     */
+    fire: function() {
+        this._events.fire.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#fireDelegate}
+     */
+    fireDelegate: function() {
+        this._events.fireDelegate.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#on}
+     */
+    on: function() {
+        this._events.on.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#once}
+     */
+    once: function() {
+        this._events.once.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#addEventListener}
+     */
+    addEventListener: function() {
+        this._events.addEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#removeEventListener}
+     */
+    removeEventListener: function() {
+        this._events.removeEventListener.apply(this._events, arguments);
+    },
+
+    /**
+     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+        this._events.off.apply(this._events, arguments);
+    }
 });});
 
