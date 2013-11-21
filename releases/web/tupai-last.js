@@ -514,7 +514,7 @@ Package('tupai.util')
     _storage: undefined,
     initialize: function(limit, overflowRemoveSize) {
 
-        this._limit = limit || 300;
+        this._limit = limit || 100000;
         this._overflowRemoveSize = overflowRemoveSize || (this._limit/10);
         this._storage = [];
     },
