@@ -4,6 +4,7 @@ test('basic',function() {
     .use('tupai.ui.ViewEvents')
     .run(function(cp) {
         var elem = document.createElement('div');
+        document.getElementsByTagName('body')[0].appendChild(elem);
 
         var clickEvent = function(e) {
             ok(true, 'check click event')
