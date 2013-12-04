@@ -43,6 +43,8 @@ Package('tupai.ui')
 .define('TemplateEngine', function(cp) {
 
     var loopChName = function(tarElement, cb) {
+
+        if(!tarElement) throw new Error('loopChName failed. because element is undefined');
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i<len; ++i) {
             var child = elements[i];
@@ -58,6 +60,7 @@ Package('tupai.ui')
 
     var bindToElement = function(tarElement, data) {
 
+        if(!tarElement) throw new Error('bindToElement failed. because element is undefined');
         loopChName(tarElement, function(name, child) {
             var value = cp.HashUtil.getValueByName(name, data);
             setValue(child, value);

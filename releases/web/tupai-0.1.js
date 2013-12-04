@@ -1323,7 +1323,7 @@ Package('tupai.net')
 Package('tupai.util')
 .define('CommonUtil', function(cp) {
     var elm = document.createElement('div');
-    var getDataSet;
+    var getDataSet, getDataSets;
     if (!elm.dataset) {
         /*
         var camelize = function(str) {
@@ -1335,6 +1335,15 @@ Package('tupai.util')
         var toDash = function(str) {
             return str.replace(/([A-Z])/g, function(m) { return '-'+m.toLowerCase(); });
         };
+        var toCamel = function(str) {
+            var tokens = str.split('-');
+            for(var i=1, n=tokens.length; i<n; i++) {
+                var s = tokens[i];
+                if(!s[0]) continue;
+                tokens[i] = s[0].toUpperCase()+s.substring(1);
+            }
+            return tokens.join('');
+        };
         getDataSet = function(element, name) {
             var dataName = 'data-';
             var attrs = element.attributes;
@@ -1342,11 +1351,43 @@ Package('tupai.util')
 
             var attr = attrs[attrName];
             return attr && attr.value;
-        }
+        };
+        getDataSets = function(element, matchName) {
+            var attrs = element.attributes;
+            var datasets = {};
+            var regexp;
+            if(matchName) {
+                regexp = new RegExp(matchName);
+            }
+            for(var i=0, n=attrs.length; i<n; i++) {
+                var attr = attrs[i];
+                var name = attr.name;
+                if(/^data-/.test(name)) {
+                    var attrName  = toCamel(name.substring(5));
+                    if(regexp && !regexp.test(attrName)) continue;
+                    datasets[attrName] = attr.value;
+                }
+            }
+            return datasets;
+        };
     } else {
         getDataSet = function(element, name) {
             return element.dataset[name];
-        }
+        };
+        getDataSets = function(element, matchName) {
+
+            if(!matchName) {
+                return element.dataset;
+            }
+            var ret = {};
+            var datasets = element.dataset;
+            var regexp = new RegExp(matchName);
+            for(var name in datasets) {
+                if(!regexp.test(name)) continue;
+                ret[name] = datasets[name];
+            }
+            return ret;
+        };
     }
 
     var haveClassList = !!elm.classList;
@@ -1372,6 +1413,7 @@ Package('tupai.util')
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
+        getDataSets: getDataSets,
         getDataSet: getDataSet
     };
 });
@@ -1420,6 +1462,8 @@ Package('tupai.ui')
 .define('TemplateEngine', function(cp) {
 
     var loopChName = function(tarElement, cb) {
+
+        if(!tarElement) throw new Error('loopChName failed. because element is undefined');
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i<len; ++i) {
             var child = elements[i];
@@ -1435,6 +1479,7 @@ Package('tupai.ui')
 
     var bindToElement = function(tarElement, data) {
 
+        if(!tarElement) throw new Error('bindToElement failed. because element is undefined');
         loopChName(tarElement, function(name, child) {
             var value = cp.HashUtil.getValueByName(name, data);
             setValue(child, value);
