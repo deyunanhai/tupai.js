@@ -109,7 +109,7 @@
             }
             var src = mRemoteBaseUrl + classPath.split('.').join('/') + '.js';
             if(!mCacheEnabled) {
-                src += '?' + Date.now();
+                src += '?' + (Date.now?Date.now():(+new Date()));
             }
             s.src = src;
             document.getElementsByTagName('head')[0].appendChild(s);

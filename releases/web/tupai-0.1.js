@@ -109,7 +109,7 @@
             }
             var src = mRemoteBaseUrl + classPath.split('.').join('/') + '.js';
             if(!mCacheEnabled) {
-                src += '?' + Date.now();
+                src += '?' + (Date.now?Date.now():(+new Date()));
             }
             s.src = src;
             document.getElementsByTagName('head')[0].appendChild(s);
@@ -2119,29 +2119,39 @@ Package('tupai')
         cp.TransitManager.prototype.initialize.apply(this, arguments);
 
         this._separator = (config && config.separator) || "#!";
-        var initialURL = location.href;
         var THIS = this;
         this._popEventHanlder=undefined;
-        window.addEventListener("popstate", function(jsevent) {
-            //console.log(jsevent);
-            var state = jsevent.state;
-            if(!state) return;
-            var url = state.url;
-            if(!url) return;
 
-            var hanlder = THIS._popEventHanlder;
-            if(hanlder) {
-                delete THIS._popEventHanlder;
-                hanlder();
-                return;
-            }
+        this._addPopStateEventListener = function() {
+            window.addEventListener("popstate", function(jsevent) {
+                //console.log(jsevent);
+                var state = jsevent.state;
+                if(!state || !state.url) {
+                    // no state
+                    var url = window.location.href;
+                    var entry = THIS._parseFromLocation();
+                    cp.TransitManager.prototype.transitWithHistory.apply(THIS, [entry.url, entry.options]);
 
-            THIS._history = state.history || [];
-            THIS._transit(
-                url,
-                state.options,
-                state.transitOptions);
-        });
+                    return;
+                }
+
+                var url = state.url;
+                var hanlder = THIS._popEventHanlder;
+                if(hanlder) {
+                    delete THIS._popEventHanlder;
+                    hanlder();
+                    return;
+                }
+
+                THIS._history = state.history || [];
+                THIS._transit(
+                    url,
+                    state.options,
+                    state.transitOptions);
+            });
+
+            THIS._addPopStateEventListener = function(){};
+        };
     },
     back: function (targetUrl, options, transitOptions) {
 
@@ -2248,6 +2258,9 @@ Package('tupai')
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
             this._replaceState();
+        }
+        if(transitOptions && transitOptions.entry) {
+            this._addPopStateEventListener();
         }
         return result;
     }
@@ -3041,14 +3054,21 @@ Package('tupai.model.caches')
         }
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
             var dataText = this._nativeStorage[this._nativeStorageKey];
             if(dataText) {
-                this._storage = JSON.parse(dataText);
+                var d = JSON.parse(dataText);
+                if(d.version && d.data) {
+                    this._storage = d.data;
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
             for(var name in this._storage) {
                 this._size ++;
@@ -3102,7 +3122,13 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage);
+            var d = {};
+            for(var name in this._nativeStorageMeta) {
+                d[name] = this._nativeStorageMeta[name];
+            }
+            d.data = this._storage;
+            d.created = (Date.now?Date.now():(+new Date()));
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(d);
         }
     },
     _cacheGC: function() {
@@ -4570,14 +4596,21 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
             var dataText = this._nativeStorage[this._nativeStorageKey];
             if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
+                var d = JSON.parse(dataText);
+                if(d.version && d.data) {
+                    this._storage.swapStorage(d.data);
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
         }
 
@@ -4614,7 +4647,13 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+            var d = {};
+            for(var name in this._nativeStorageMeta) {
+                d[name] = this._nativeStorageMeta[name];
+            }
+            d.data = this._storage.getStorage();
+            d.created = (Date.now?Date.now():(+new Date()));
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(d);
         }
     },
 

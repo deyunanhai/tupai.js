@@ -47,14 +47,21 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
             var dataText = this._nativeStorage[this._nativeStorageKey];
             if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
+                var d = JSON.parse(dataText);
+                if(d.version && d.data) {
+                    this._storage.swapStorage(d.data);
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
         }
 
@@ -91,7 +98,13 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+            var d = {};
+            for(var name in this._nativeStorageMeta) {
+                d[name] = this._nativeStorageMeta[name];
+            }
+            d.data = this._storage.getStorage();
+            d.created = (Date.now?Date.now():(+new Date()));
+            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(d);
         }
     },
 
