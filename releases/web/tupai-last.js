@@ -1408,11 +1408,23 @@ Package('tupai.util')
         return !!url.match(/^(https?)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
     };
 
+    var trim;
+    if(String.prototype.trim) {
+        trim = function(s) {
+            return s.trim();
+        };
+    } else {
+        trim = function(s) {
+            return s.replace(/(^\s+)|(\s+$)/g, "");
+        };
+    }
+
     return {
         bind: bind,
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
+        trim: trim,
         getDataSets: getDataSets,
         getDataSet: getDataSet
     };
@@ -3496,7 +3508,7 @@ Package('tupai.ui')
     _children: undefined,
     _rendered: undefined,
     _element: undefined,
-    _baseViewDelete: undefined,
+    _baseViewDelegate: undefined,
     _events: undefined,
 
     /**
@@ -3598,7 +3610,7 @@ Package('tupai.ui')
      * -  viewDidHide(view);
      */
     setDelegate: function(delegate) {
-        this._baseViewDelete = delegate;
+        this._baseViewDelegate = delegate;
     },
 
     /*
@@ -3644,6 +3656,7 @@ Package('tupai.ui')
         if(!this._parentAdded) {
             parentNode.appendChild(this._element);
             this._parentAdded = true;
+            this.bindEvents();
         }
 
         this._didRender();
@@ -3656,8 +3669,8 @@ Package('tupai.ui')
         if(this.didRender) {
             this.didRender();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
-            this._baseViewDelete.viewDidRender(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidRender) {
+            this._baseViewDelegate.viewDidRender(this);
         }
         this.fire('didRender');
     },
@@ -3666,8 +3679,8 @@ Package('tupai.ui')
         if(this.didLoad) {
             this.didLoad();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidLoad) {
-            this._baseViewDelete.viewDidLoad(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidLoad) {
+            this._baseViewDelegate.viewDidLoad(this);
         }
         this.fire('didLoad');
         this._didLoadFlg = true;
@@ -3977,8 +3990,8 @@ Package('tupai.ui')
         if(child.didUnload) {
             child.didUnload();
         }
-        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
+        if(child._baseViewDelegate && child._baseViewDelegate.viewDidUnload) {
+            child._baseViewDelegate.viewDidUnload(child);
         }
         child.fire('didUnload');
     },
@@ -4091,6 +4104,98 @@ Package('tupai.ui')
     },
 
     /**
+     * bind event to element and children
+     * <div>
+     *     <button data-ch-click="didClickButton">click me!<button>
+     * </div>
+     * see {@link tupai.ui.ViewEvents#bind}
+     * @param {String} event
+     * @param {Function} callback
+     * @param {Boolean} useCapture
+     *
+     */
+    bindEvents: function() {
+        this._checkElement();
+        var elements = this._element.querySelectorAll('*[data-ch-click]');
+        if(!this._baseViewDelegate) return;
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var click = cp.CommonUtil.getDataSet(elements[i], 'chClick');
+            var fn = this._parseFn(click);
+            if(!fn) {
+                throw new Error('can\'t parse click event. ' + click);
+            }
+            this._bindEventToFn(elm, 'click', fn);
+        }
+    },
+
+    _bindEventToFn: function(elm, type, fnObj) {
+
+        var delegate = this._baseViewDelegate;
+        var fn = delegate[fnObj.name];
+        if(typeof fn !== 'function') {
+            throw new Error('can\'t find function ' + fnObj.name + ' in baseViewDelegate.');
+        }
+        this._viewEvents.bind(elm, type, function() {
+            fn.apply(delegate, fnObj.args);
+        });
+    },
+
+    _parseFn: function(str) {
+
+        str = cp.CommonUtil.trim(str);
+        var matchs = str.match(/^(\w+)([(]?)([^()]*)([)]?)$/);
+        if(!matchs) return undefined;
+        if(!matchs[1] ||
+           (matchs[2] && !matchs[4]) ||
+           (!matchs[2] && matchs[4])
+          ) return undefined;
+
+        var fnName = matchs[1];
+        var params = cp.CommonUtil.trim(matchs[3]);
+        var args=[];
+        var checkers = [
+            function(s) {
+                var m = s.match(/^['"]{1}(.*)['"]{1}$/);
+                if(!m) return;
+                args.push(m[1]);
+                return true;
+            },
+            function(s) {
+                var i = parseFloat(s);
+                if(!Number.isNaN(i)) {
+                    args.push(i);
+                    return true;
+                }
+            }
+        ];
+
+        if(params) {
+            params = params.split(',');
+            for(var i=0, n=params.length; i<n; i++) {
+                //check params
+                var p = cp.CommonUtil.trim(params[i]);
+                var m=false;
+                for(var j=0, jn=checkers.length; j<jn; j++) {
+                    var c = checkers[j];
+                    if(c(p)) {
+                        m=true;
+                        break;
+                    }
+                }
+                if(!m) {
+                    throw new Error('can\'t parse parameter ' + p);
+                }
+            }
+        }
+
+        return {
+            name: fnName,
+            args: args
+        };
+    },
+
+    /**
      * bind event to element
      * see {@link tupai.ui.ViewEvents#bind}
      * @param {String} event
@@ -4111,7 +4216,7 @@ Package('tupai.ui')
      *
      */
     unbind: function(event, callback) {
-        this._checkElement();
+        if(!this._element) return;
         this._viewEvents.unbind(this._element, event, callback);
     },
 
@@ -4139,8 +4244,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'none') return;
         this.setStyle('display', 'none');
         this.fire('hide');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidHide) {
-            this._baseViewDelete.viewDidHide(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidHide) {
+            this._baseViewDelegate.viewDidHide(this);
         }
     },
 
@@ -4163,8 +4268,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'block') return;
         this.setStyle('display', null);
         this.fire('show');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidShow) {
-            this._baseViewDelete.viewDidShow(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidShow) {
+            this._baseViewDelegate.viewDidShow(this);
         }
     },
 

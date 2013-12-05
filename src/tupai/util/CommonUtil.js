@@ -90,11 +90,23 @@ Package('tupai.util')
         return !!url.match(/^(https?)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
     };
 
+    var trim;
+    if(String.prototype.trim) {
+        trim = function(s) {
+            return s.trim();
+        };
+    } else {
+        trim = function(s) {
+            return s.replace(/(^\s+)|(\s+$)/g, "");
+        };
+    }
+
     return {
         bind: bind,
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
+        trim: trim,
         getDataSets: getDataSets,
         getDataSet: getDataSet
     };

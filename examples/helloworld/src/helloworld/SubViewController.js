@@ -15,10 +15,9 @@ Package('helloworld')
     },
     viewDidLoad: function (view) {
         cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
-        var This = this;
-        view.findViewById('btnBack').bind('click', function() {
-                This._window.back();
-        });
+    },
+    didClicked: function() {
+        this._window.back();
     },
     viewDidUnload: function (view) {
         cp.ViewController.prototype.viewDidUnload.apply(this, arguments);
