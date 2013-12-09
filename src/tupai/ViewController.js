@@ -197,6 +197,20 @@ Package('tupai')
     },
 
     /**
+     * get Cache by name
+     */
+    getCacheManager: function() {
+        return this._app.getCacheManager();
+    },
+
+    /**
+     * get Cache by name
+     */
+    getApiManager: function(name) {
+        return this._app.getApiManager(name);
+    },
+
+    /**
      * get the content view object
      */
 	getContentView: function() {

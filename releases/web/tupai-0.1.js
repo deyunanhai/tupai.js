@@ -3656,7 +3656,7 @@ Package('tupai.ui')
         if(!this._parentAdded) {
             parentNode.appendChild(this._element);
             this._parentAdded = true;
-            this.bindEvents();
+            this.bindEvents(this._baseViewDelegate);
         }
 
         this._didRender();
@@ -4114,10 +4114,11 @@ Package('tupai.ui')
      * @param {Boolean} useCapture
      *
      */
-    bindEvents: function() {
+    bindEvents: function(delegate) {
+        if(!delegate) return;
+
         this._checkElement();
         var elements = this._element.querySelectorAll('*[data-ch-click]');
-        if(!this._baseViewDelegate) return;
         for (var i=0,len=elements.length; i<len; ++i) {
             var elm = elements[i];
             var click = cp.CommonUtil.getDataSet(elements[i], 'chClick');
@@ -4125,13 +4126,12 @@ Package('tupai.ui')
             if(!fn) {
                 throw new Error('can\'t parse click event. ' + click);
             }
-            this._bindEventToFn(elm, 'click', fn);
+            this._bindEventToFn(elm, 'click', fn, delegate);
         }
     },
 
-    _bindEventToFn: function(elm, type, fnObj) {
+    _bindEventToFn: function(elm, type, fnObj, delegate) {
 
-        var delegate = this._baseViewDelegate;
         var fn = delegate[fnObj.name];
         if(typeof fn !== 'function') {
             throw new Error('can\'t find function ' + fnObj.name + ' in baseViewDelegate.');
@@ -6330,6 +6330,20 @@ Package('tupai')
      */
     getCache: function(name) {
         return this._app.getCache(name);
+    },
+
+    /**
+     * get Cache by name
+     */
+    getCacheManager: function() {
+        return this._app.getCacheManager();
+    },
+
+    /**
+     * get Cache by name
+     */
+    getApiManager: function(name) {
+        return this._app.getApiManager(name);
     },
 
     /**
