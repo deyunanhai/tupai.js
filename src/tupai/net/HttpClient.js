@@ -81,6 +81,7 @@ Package('tupai.net')
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
             this._defaultRequestType = config.defaultRequestType;
+            this._timeout = config.timeout;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -151,7 +152,8 @@ Package('tupai.net')
                 method: requestMethod,
                 data: requestData,
                 type: requestType,
-                header: requestHeader
+                header: requestHeader,
+                timeout: this._timeout
             }
         );
     },

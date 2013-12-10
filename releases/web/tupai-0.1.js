@@ -932,7 +932,7 @@ Package('tupai.util')
 
         xhr.onreadystatechange = function() {
             if ( xhr.readyState === 4 ) {
-                if ( (xhr.status >= 200 && xhr.status < 300) || xhr.status == 0 ) {
+                if (xhr.status >= 200 && xhr.status < 300) {
                     success(xhr.responseText, xhr);
                 } else {
                     error(xhr);
@@ -948,6 +948,10 @@ Package('tupai.util')
             }
         }
 
+        if(options.timeout) {
+            xhr.timeout = options.timeout;
+            //xhr.ontimeout = function () { error(xhr); }
+        }
         //console.log(method + ' ' + url + ' -- ' + data);
         xhr.open(method, url, true);
 
@@ -3066,18 +3070,19 @@ Package('tupai.model.caches')
         }
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
-            this._nativeStorageMeta = { version: 1 };
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
-            this._nativeStorageMeta = { version: 1 };
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
                 var d = JSON.parse(dataText);
-                if(d.version && d.data) {
-                    this._storage = d.data;
+                if(d.m && d.d) {
+                    this._storage = d.d;
+                    this._meta = d.m;
                 } else {
                     console.warn('unknow native storage format!');
                 }
@@ -3101,6 +3106,15 @@ Package('tupai.model.caches')
         this._delegate &&
         this._delegate.didCacheChanged &&
         this._delegate.didCacheChanged(this._name, this, options);
+    },
+
+    /**
+     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     *
+     */
+    getCreated: function() {
+        return this._meta && this._meta.created;
     },
 
     /**
@@ -3134,13 +3148,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            var d = {};
-            for(var name in this._nativeStorageMeta) {
-                d[name] = this._nativeStorageMeta[name];
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
             }
-            d.data = this._storage;
-            d.created = (Date.now?Date.now():(+new Date()));
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(d);
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
     _cacheGC: function() {
@@ -3381,6 +3401,7 @@ Package('tupai.net')
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
             this._defaultRequestType = config.defaultRequestType;
+            this._timeout = config.timeout;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -3451,7 +3472,8 @@ Package('tupai.net')
                 method: requestMethod,
                 data: requestData,
                 type: requestType,
-                header: requestHeader
+                header: requestHeader,
+                timeout: this._timeout
             }
         );
     },
@@ -4701,18 +4723,19 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
-            this._nativeStorageMeta = { version: 1 };
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
-            this._nativeStorageMeta = { version: 1 };
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
                 var d = JSON.parse(dataText);
-                if(d.version && d.data) {
-                    this._storage.swapStorage(d.data);
+                if(d.m && d.d) {
+                    this._storage.swapStorage(d.d);
+                    this._meta = d.m;
                 } else {
                     console.warn('unknow native storage format!');
                 }
@@ -4723,6 +4746,15 @@ Package('tupai.model.caches')
         this._delegate = delegate;
         this._name = name;
     },
+
+    /**
+     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     */
+    getCreated: function() {
+        return this._meta && this._meta.created;
+    },
+
     didMemCacheGC: function() {
         this._saveToNative();
         this._delegate &&
@@ -4752,13 +4784,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            var d = {};
-            for(var name in this._nativeStorageMeta) {
-                d[name] = this._nativeStorageMeta[name];
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
             }
-            d.data = this._storage.getStorage();
-            d.created = (Date.now?Date.now():(+new Date()));
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(d);
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage.getStorage()
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
 

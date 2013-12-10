@@ -109,7 +109,7 @@ Package('tupai.util')
 
         xhr.onreadystatechange = function() {
             if ( xhr.readyState === 4 ) {
-                if ( (xhr.status >= 200 && xhr.status < 300) || xhr.status == 0 ) {
+                if (xhr.status >= 200 && xhr.status < 300) {
                     success(xhr.responseText, xhr);
                 } else {
                     error(xhr);
@@ -125,6 +125,10 @@ Package('tupai.util')
             }
         }
 
+        if(options.timeout) {
+            xhr.timeout = options.timeout;
+            //xhr.ontimeout = function () { error(xhr); }
+        }
         //console.log(method + ' ' + url + ' -- ' + data);
         xhr.open(method, url, true);
 
