@@ -2146,9 +2146,11 @@ Package('tupai')
                     // no state
                     var url = window.location.href;
                     var entry = THIS._parseFromLocation();
-                    var result = cp.TransitManager.prototype.transitWithHistory.apply(THIS, [entry.url, entry.options]);
-                    if(result) {
-                        THIS._replaceState();
+                    if(this._current) {
+                        var result = cp.TransitManager.prototype.transitWithHistory.apply(THIS, [entry.url, entry.options]);
+                        if(result) {
+                            THIS._replaceState();
+                        }
                     }
 
                     return;
