@@ -156,15 +156,16 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
+        var transitOptions = {entry: true};
         if(this._transitManager) {
-            return this.transit(url, options, {entry: true});
+            return this.transit(url, options, transitOptions);
         } else if(!this._rootViewControllerClasszz) {
             throw new Error('missing root view controller.');
         }
 
         var controller = new this._rootViewControllerClasszz(this);
-        controller.viewInit(options, '/root', 'root');
-        this.transitController(controller, '/root', options,{});
+        controller.viewInit(options, '/root', transitOptions);
+        this.transitController(controller, '/root', options, transitOptions);
     },
 
     transitController: function (controller, url, options, transitOptions) {

@@ -2,7 +2,7 @@ Package('test.transit')
 .use('tupai.ViewController')
 .use('tupai.ui.View')
 .define('RootViewController', function(cp) { return cp.ViewController.extend({
-    viewInit: function(options, url, name) {
+    viewInit: function(options, url) {
         this.setContentView(new cp.View());
     },
     transitController: function(controller, url, options, transitOptions) {
@@ -14,7 +14,7 @@ Package('test.transit')
 .use('tupai.ViewController')
 .use('tupai.ui.View')
 .define('SubViewController', function(cp) { return cp.ViewController.extend({
-    viewInit: function(options, url, name) {
+    viewInit: function(options, url) {
         this.setContentView(new cp.View());
     },
     transitController: function(controller, url, options, transitOptions) {
@@ -82,7 +82,7 @@ test('transit by cached RootViewController 1',function() {
     .use('tupai.ViewController')
     .use('tupai.ui.View')
     .define('RootViewController', function(cp) { return cp.ViewController.extend({
-        viewInit: function(options, url, name) {
+        viewInit: function(options, url) {
             this.setContentView(new cp.View());
         },
         transitController: function(controller, url, options, transitOptions) {

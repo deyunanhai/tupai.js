@@ -2061,7 +2061,7 @@ Package('tupai')
 
         var initController = function(controller) {
             if(controller) {
-                (controller.viewInit && controller.viewInit(options, url, r));
+                (controller.viewInit && controller.viewInit(options, url, transitOptions));
             }
             if(!pController.transitController)
                 throw new Error('container controller must have transitController delegate function. ' + url);
@@ -5451,15 +5451,16 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
+        var transitOptions = {entry: true};
         if(this._transitManager) {
-            return this.transit(url, options, {entry: true});
+            return this.transit(url, options, transitOptions);
         } else if(!this._rootViewControllerClasszz) {
             throw new Error('missing root view controller.');
         }
 
         var controller = new this._rootViewControllerClasszz(this);
-        controller.viewInit(options, '/root', 'root');
-        this.transitController(controller, '/root', options,{});
+        controller.viewInit(options, '/root', transitOptions);
+        this.transitController(controller, '/root', options, transitOptions);
     },
 
     transitController: function (controller, url, options, transitOptions) {
@@ -6188,8 +6189,8 @@ Package('tupai')
  * -  viewDidHide(view);
  *
  * ### The delegate commands from TransitManager
- * -  viewInit(options, url, name);
- * -  transitController(controller, url, options);
+ * -  viewInit(options, url, transitOptions);
+ * -  transitController(controller, url, options, transitOptions);
  *
  * ### The delegate commands from TableView
  * -  numberOfRows(tableView);
@@ -6443,8 +6444,8 @@ Package('tupai')
      * you should ovveride this function and create a content view by setContentView
      * @param {Object} options
      * @param {String} url
-     * @param {String} name
+     * @param {Object} transit options
      */
-	viewInit: function(options, url, name) {
+	viewInit: function(options, url, transitOptions) {
 	}
 });});
