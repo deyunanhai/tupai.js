@@ -654,6 +654,7 @@ Package('tupai.ui')
             if(!fn) {
                 throw new Error('can\'t parse click event. ' + click);
             }
+            fn.args.push(elm);
             this._bindEventToFn(elm, 'click', fn, delegate);
         }
     },

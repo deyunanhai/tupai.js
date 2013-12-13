@@ -111,6 +111,22 @@ Package('tupai.model.caches')
     },
 
     /**
+     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
+    },
+
+    /**
      * query cache and return {@link tupai.model.DataSet DataSet}
      * @param {Object} args sess {@link tupai.model.DataSet}
      * @return {tupai.model.DataSet} DataSet

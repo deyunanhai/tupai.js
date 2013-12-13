@@ -155,6 +155,22 @@ Package('tupai.model.caches')
     },
 
     /**
+     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
+    },
+
+    /**
      * push data to cache. the method will not notify cache changed.
      * you need to call end function to end edit and notify cache changed.
      * @param {Object} data
