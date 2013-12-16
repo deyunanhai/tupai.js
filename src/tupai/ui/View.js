@@ -514,7 +514,11 @@ Package('tupai.ui')
         if(!child._element) {
             return;
         }
-        child._element.parentNode.removeChild(child._element);
+        if(child._element.parentNode) {
+            child._element.parentNode.removeChild(child._element);
+        } else {
+            //allready removed from dom.
+        }
         if(child.didUnload) {
             child.didUnload();
         }
