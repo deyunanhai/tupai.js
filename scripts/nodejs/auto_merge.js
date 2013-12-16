@@ -147,10 +147,20 @@ function getClassInfo(classzz) {
     };
 }
 
+var classesCache={};
 function parseDirtyUseList(classzz, map) {
-    var arr = [];
+    var cacheKey = classzz.filePath;
+    var ret = classesCache[cacheKey];
+    if(ret) {
+        for(var name in ret) {
+            map[name] = ret[name];
+        }
+        return;
+    }
     var classInfo = getClassInfo(classzz);
     if(!classInfo) return;
+
+    var arr = [];
     classInfo.useList.forEach(function(name) {
        if(!name) return;
        if(!mIsTupaiCore) {
@@ -164,10 +174,16 @@ function parseDirtyUseList(classzz, map) {
            }
        }
     });
-    map[classzz.className] = {useList: arr, classzz: classzz};
+
+    var ret={};
+    ret[classzz.className] = {useList: arr, classzz: classzz};
     for(var i=0, n=arr.length; i<n; i++) {
-        parseDirtyUseList(arr[i], map);
+        parseDirtyUseList(arr[i], ret);
     }
+    for(var name in ret) {
+        map[name] = ret[name];
+    }
+    classesCache[cacheKey] = ret;
 }
 
 function hasClass(arr, classzz) {
