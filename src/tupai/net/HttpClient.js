@@ -134,7 +134,7 @@ Package('tupai.net')
         }
 
         var THIS = this;
-        cp.HttpUtil.ajax(
+        return cp.HttpUtil.ajax(
             url,
             function(responseText, xhr) {
                 var response = THIS._getResponseFromXhr(xhr, responseText);
@@ -169,6 +169,6 @@ Package('tupai.net')
         if(!request) {
             throw new Error('missing required parameter.');
         }
-        this._execute(request, responseDelegate);
+        return this._execute(request, responseDelegate);
     }
 });});
