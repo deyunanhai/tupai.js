@@ -59,20 +59,29 @@ Package('tupai.ui')
 .use('tupai.util.HashUtil')
 .define('TemplateEngine', function(cp) {
 
-    var bindToElement = function(tarElement, data) {
+    var loopChName = function(tarElement, cb) {
+
+        if(!tarElement) throw new Error('loopChName failed. because element is undefined');
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i&lt;len; ++i) {
-            var elm = elements[i];
+            var child = elements[i];
             var name = cp.CommonUtil.getDataSet(elements[i], 'chName');
 
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(elm, value);
+            cb(name, child, tarElement);
         }
         var name = cp.CommonUtil.getDataSet(tarElement, 'chName');
         if(name) {
-            var value = cp.HashUtil.getValueByName(name, data);
-            setValue(tarElement, value);
+            cb(name, tarElement, tarElement);
         }
+    };
+
+    var bindToElement = function(tarElement, data) {
+
+        if(!tarElement) throw new Error('bindToElement failed. because element is undefined');
+        loopChName(tarElement, function(name, child) {
+            var value = cp.HashUtil.getValueByName(name, data);
+            setValue(child, value);
+        });
     };
 
 <span id='tupai-ui-TemplateEngine-method-createElement'>    /**
@@ -85,9 +94,9 @@ Package('tupai.ui')
             return element;
         } else if(template) {
             var rootTag = 'div';
-            if(template.match(/^&lt;(tr|th)&gt;/)) {
+            if(template.match(/^&lt;(tr|th)/)) {
                 rootTag = 'tbody';
-            } else if(template.match(/^&lt;(tbody|thead)&gt;/)) {
+            } else if(template.match(/^&lt;(tbody|thead)/)) {
                 rootTag = 'table';
             }
             var root = document.createElement(rootTag);
@@ -100,36 +109,78 @@ Package('tupai.ui')
         }
     };
 
+    var getBindedValue = function(tarElement, data) {
+        data = data || {};
+        loopChName(tarElement, function(name, child) {
+            var value = getValue(child);
+            data[name] = value;
+        });
+        return data;
+    };
+
 <span id='tupai-ui-TemplateEngine-method-setValue'>    /**
 </span>     * set element value
      *
      */
     var setValue = function(elm, value) {
-        if (elm.length) {
+        if (elm.length !== undefined) {
             // select
-            var values = (value instanceof Array) ? value : [value];
-            Array.prototype.forEach.call(elm, function(elm) {
-                if (values.indexOf(elm.value) != -1) {
-                    elm.selected = true;
-                } else {
-                    elm.selected = false;
+            var values;
+            if(value instanceof Array) {
+                values = value;
+            } else if(typeof value === 'object') {
+                var config = value;
+                var fields = config.fields;
+                var html = '';
+                if(fields) {
+                    fields.forEach(function(f) {
+                        html += '&lt;option value=&quot;'+f.value+'&quot;&gt;'+f.text+'&lt;/option&gt;';
+                    });
                 }
-            });
+                elm.innerHTML=html;
+                return setValue(elm, config.value);
+            } else {
+                values = [value];
+            }
+            for(var i=0, n=elm.length; i&lt;n; i++) {
+                var selm = elm[i];
+                if (values.indexOf(selm.value) != -1) {
+                    selm.selected = true;
+                } else {
+                    selm.selected = false;
+                }
+            }
         } else if (elm.value !== undefined) {
             // input system
             if (/radio|checkbox/.test(elm.type)) {
                 elm.checked = value;
             } else {
-                elm.value = value;
+                elm.value = ((value===undefined)?'':value);
             }
         } else if(elm.src !== undefined) {
-            elm.src = value;
+            if(value !== undefined) {
+                elm.src = value;
+            } else {
+                elm.removeAttribute('src');
+            }
+        } else if(elm.tagName === 'A') {
+            var href = value;
+            if(typeof value === 'object') {
+                href = value.href;
+                elm.innerHTML = (value.text===undefined?'':value.text);
+            }
+
+            if(href !== undefined) {
+                elm.href = href;
+            } else {
+                elm.removeAttribute('href');
+            }
         } else {
             // other
             if(value === undefined) {
                 elm.innerHTML = '';
             } else {
-                elm.innerHTML = value;
+                elm.innerHTML = ((value===undefined)?'':value);
             }
         }
     };
@@ -163,6 +214,11 @@ Package('tupai.ui')
             }
         } else if (elm.src !== undefined) {
             return elm.src;
+        } else if(elm.tagName === 'A') {
+            return {
+                href: elm.getAttribute('href'),
+                value: elm.innerHTML
+            }
         } else {
             return elm.innerHTML;
         }
@@ -172,6 +228,7 @@ Package('tupai.ui')
 
     return {
         createElement: createElement,
+        getBindedValue: getBindedValue,
         setValue: setValue,
         getValue: getValue
     };

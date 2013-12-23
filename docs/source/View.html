@@ -53,7 +53,7 @@ Package('tupai.ui')
     _children: undefined,
     _rendered: undefined,
     _element: undefined,
-    _baseViewDelete: undefined,
+    _baseViewDelegate: undefined,
     _events: undefined,
 
 <span id='tupai-ui-View-method-initialize'>    /**
@@ -70,6 +70,8 @@ Package('tupai.ui')
 
         this._events = undefined;
         this._didLoadFlg = false;
+        this._viewIDMap = undefined;
+        this._spViews = undefined;
         this._templateEngine = cp.TemplateEngine;
         this._viewEvents = cp.ViewEvents;
         if(args) {
@@ -99,29 +101,48 @@ Package('tupai.ui')
         if(!e.stopParent &amp;&amp; this._parent) this._parent.fire(name, e);
     },
 
-<span id='tupai-ui-View-method-addEventListener'>    /**
-</span>     * add event listener.
-     * @param {String} type
-     * @param {Function} listener
-     * @param {Boolean} [first=true] add listener to the first of events pool
-     *
+<span id='tupai-ui-View-method-on'>    /**
+</span>     * {@link tupai.util.Events#on}
      */
-    addEventListener: function(type, listener, first) {
+    on: function() {
 
         if(!this._events) this._events = new cp.Events();
-        this._events.addEventListener(type, listener, first);
+        this._events.on.apply(this._events, arguments);
+    },
+
+<span id='tupai-ui-View-method-once'>    /**
+</span>     * {@link tupai.util.Events#once}
+     */
+    once: function() {
+
+        if(!this._events) this._events = new cp.Events();
+        this._events.once.apply(this._events, arguments);
+    },
+
+<span id='tupai-ui-View-method-addEventListener'>    /**
+</span>     * {@link tupai.util.Events#addEventListener}
+     */
+    addEventListener: function() {
+
+        if(!this._events) this._events = new cp.Events();
+        this._events.addEventListener.apply(this._events, arguments);
+    },
+
+<span id='tupai-ui-View-method-off'>    /**
+</span>     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+
+        if(!this._events) return;
+        this._events.off.apply(this._events, arguments);
     },
 
 <span id='tupai-ui-View-method-removeEventListener'>    /**
-</span>     * remove the listener if exists.
-     * @param {String} type
-     * @param {Function} listener
-     *
+</span>     * {@link tupai.util.Events#removeEventListener}
      */
-    removeEventListener: function(type, listener) {
-
+    removeEventListener: function() {
         if(!this._events) return;
-        this._events.removeEventListener(type, listener);
+        this._events.removeEventListener.apply(this._events, arguments);
     },
 
 <span id='tupai-ui-View-method-setDelegate'>    /**
@@ -135,9 +156,10 @@ Package('tupai.ui')
      * -  viewDidHide(view);
      */
     setDelegate: function(delegate) {
-        this._baseViewDelete = delegate;
+        this._baseViewDelegate = delegate;
     },
 
+    /*
     markNeedRender: function() {
         for(var i=0,n=this._children.length;i&lt;n;i++) {
             var child = this._children[i];
@@ -145,6 +167,7 @@ Package('tupai.ui')
         }
         this._rendered = false;
     },
+    */
 
     iterateChildren: function(callback) {
         for(var i=0,n=this._children.length;i&lt;n;i++) {
@@ -167,48 +190,57 @@ Package('tupai.ui')
 
         this._onChildrenRender(args);
     },
+
     _onHTMLRender: function(parentNode, args) {
 
         if(this._rendered) return false;
-
-        var template = null;
 
         this._checkElement();
         if(this.willRender) {
             this.willRender();
         }
-        parentNode.appendChild(this._element);
-
-        this._rendered = true;
-
-        if(this.didRender) {
-            this.didRender();
+        if(!this._parentAdded) {
+            parentNode.appendChild(this._element);
+            this._parentAdded = true;
+            this.bindEvents(this._baseViewDelegate);
         }
 
-        if(this._baseViewDelete &amp;&amp; this._baseViewDelete.viewDidRender) {
-            this._baseViewDelete.viewDidRender(this);
-        }
-
-        this.fire('didRender');
+        this._didRender();
 
         return true;
     },
 
+    _didRender: function() {
+        this._rendered = true;
+        if(this.didRender) {
+            this.didRender();
+        }
+        if(this._baseViewDelegate &amp;&amp; this._baseViewDelegate.viewDidRender) {
+            this._baseViewDelegate.viewDidRender(this);
+        }
+        this.fire('didRender');
+    },
+
+    _didLoad: function() {
+        if(this.didLoad) {
+            this.didLoad();
+        }
+        if(this._baseViewDelegate &amp;&amp; this._baseViewDelegate.viewDidLoad) {
+            this._baseViewDelegate.viewDidLoad(this);
+        }
+        this.fire('didLoad');
+        this._didLoadFlg = true;
+    },
+
     _onChildrenRender: function(args) {
 
-        var containerNode = this._getContainerNode();
+        var containerNode = this._element;
         var renderView = function(child) {
+            if(!child) return;
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
             if(firsttime) {
-                if(child.didLoad) {
-                    child.didLoad();
-                }
-                if(child._baseViewDelete &amp;&amp; child._baseViewDelete.viewDidLoad) {
-                    child._baseViewDelete.viewDidLoad(child);
-                }
-                child.fire('didLoad');
-                child._didLoadFlg = true;
+                child._didLoad();
             }
         };
         for(var i=0,n=this._children.length;i&lt;n;i++) {
@@ -217,13 +249,14 @@ Package('tupai.ui')
         };
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
-                var child = this._viewIDMap[id];
-                renderView(child);
+                renderView(this._viewIDMap[id]);
             }
         }
-    },
-    _getContainerNode: function() {
-        return this._element;
+        if(this._spViews) {
+            for(var i=0, n=this._spViews.length; i&lt;n; i++) {
+                renderView(this._spViews[i]);
+            }
+        }
     },
 
 <span id='tupai-ui-View-method-getTemplate'>    /**
@@ -254,18 +287,44 @@ Package('tupai.ui')
             return this._templateParameters;
         }
     },
-    _createElementsIDMap: function() {
-        if(this._elementsIDMap) return;
+    _createViewIDMap: function() {
+        if(this._viewIDMap) return;
 
-        var elementsIDMap = {};
-        this._elementsIDMap = elementsIDMap;
+        var createView = function(elm) {
+            var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
+            var view;
+            if(viewClsNm) {
+                var cls = Package.Class.forName(viewClsNm);
+                view = new cls();
+            } else {
+                view = new cp.View();
+            }
+            view._element = elm;
+            view._parent = this;
+            view._parentAdded = true;
+            return view;
+        };
 
+        var viewIDMap = {};
         var elements = this._element.querySelectorAll('*[data-ch-id]');
         for (var i=0,len=elements.length; i&lt;len; ++i) {
             var elm = elements[i];
             var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
-            elementsIDMap[id] = elm;
+            if(!id) continue;
+            viewIDMap[id] = createView(elm);
         }
+
+        var arr = [];
+        var elements = this._element.querySelectorAll('*[data-ch-view]');
+        for (var i=0,len=elements.length; i&lt;len; ++i) {
+            var elm = elements[i];
+            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+            if(id) continue;
+            arr.push(createView(elm));
+        }
+
+        this._viewIDMap = viewIDMap;
+        this._spViews = (arr.length&gt;0?arr:undefined);
     },
     _checkElement: function() {
         if(this._element) return;
@@ -275,7 +334,7 @@ Package('tupai.ui')
         this._element = this._templateEngine.createElement(undefined, template, data);
         if(!this._element) throw new Error('cannot create element');
 
-        this._createElementsIDMap();
+        this._createViewIDMap();
     },
 
 <span id='tupai-ui-View-method-setTemplateParameters'>    /**
@@ -306,7 +365,12 @@ Package('tupai.ui')
      *
      */
     getData: function() {
-        return this.getTemplateParameters();
+        var data = this.getTemplateParameters();
+        if(this._element) {
+            return this._templateEngine.getBindedValue(this._element, data);
+        } else {
+            return data;
+        }
     },
 
 <span id='tupai-ui-View-method-setValue'>    /**
@@ -363,43 +427,7 @@ Package('tupai.ui')
     findViewById: function(id) {
 
         this._checkElement();
-        if(!this._viewIDMap) this._viewIDMap = {};
-
-        var view = this._viewIDMap[id];
-        if(view === undefined) {
-            var element = this._elementsIDMap[id];
-            if(!element) {
-                return undefined;
-            }
-            view = this._viewIDMap[id] = new cp.View();
-            view._element = element;
-            view._parent = this;
-            view._rendered = true;
-        }
-
-        return view;
-    },
-    _onRemoveChildren: function() {
-        for(var i=0,n=this._children.length;i&lt;n;i++) {
-            var c = this._children[i];
-            this._removeChild(c);
-        }
-    },
-    _removeChild: function(child) {
-
-        child._onRemoveChildren();
-
-        child._parent = null;
-        child._rendered = false;
-        child._events = null;
-        child._element.parentNode.removeChild(child._element);
-        if(child.didUnload) {
-            child.didUnload();
-        }
-        if(child._baseViewDelete &amp;&amp; child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
-        }
-        child.fire('didUnload');
+        return (this._viewIDMap &amp;&amp; this._viewIDMap[id]);
     },
 
 <span id='tupai-ui-View-method-getChildrenSize'>    /**
@@ -420,7 +448,18 @@ Package('tupai.ui')
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
                 var child = this._viewIDMap[id];
+                child.clearChildren();
                 this._removeChild(child);
+            }
+            this._viewIDMap = {};
+
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i&lt;n; i++) {
+                    var child = this._spViews[i];
+                    child.clearChildren();
+                    this._removeChild(child);
+                }
+                this._spViews = undefined;
             }
         }
         return this.clearChildrenByRange(0);
@@ -478,7 +517,31 @@ Package('tupai.ui')
      *
      */
     removeChild: function(child) {
-        return this.removeChildAt(this._children.indexOf(child));
+
+        if(!child) return child;
+
+        var index = this._children.indexOf(child);
+        if(index &lt; 0) {
+            for(var id in this._viewIDMap) {
+                if(this._viewIDMap[id] === child) {
+                    this._removeChild(child);
+                    delete this._viewIDMap[id];
+                    return child;
+                }
+            }
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i&lt;n; i++) {
+                    if(child === this._spViews[i]) {
+                        this._removeChild(child);
+                        delete this._spViews[i];
+                        return child;
+                    }
+                }
+            }
+            return null;
+        } else {
+            return this.removeChildAt(this._children.indexOf(child));
+        }
     },
 
 <span id='tupai-ui-View-method-removeChildAt'>    /**
@@ -497,7 +560,29 @@ Package('tupai.ui')
 
         child = child[0];
         this._removeChild(child);
+
         return child;
+    },
+
+    _removeChild: function(child) {
+        child._parent = null;
+        child._rendered = false;
+        child._events = null;
+        if(!child._element) {
+            return;
+        }
+        if(child._element.parentNode) {
+            child._element.parentNode.removeChild(child._element);
+        } else {
+            //allready removed from dom.
+        }
+        if(child.didUnload) {
+            child.didUnload();
+        }
+        if(child._baseViewDelegate &amp;&amp; child._baseViewDelegate.viewDidUnload) {
+            child._baseViewDelegate.viewDidUnload(child);
+        }
+        child.fire('didUnload');
     },
 
 <span id='tupai-ui-View-method-setStyle'>    /**
@@ -534,6 +619,7 @@ Package('tupai.ui')
      *
      */
     getAttribute: function(key) {
+        this._checkElement();
         return this._element.getAttribute(key);
     },
 
@@ -545,7 +631,20 @@ Package('tupai.ui')
      *
      */
     setAttribute: function(key, value) {
+        this._checkElement();
         this._element.setAttribute(key, value);
+        return this;
+    },
+
+<span id='tupai-ui-View-method-removeAttribute'>    /**
+</span>     * remove attribute value
+     * @param {String} key
+     * @return {tupai.ui.View} this view
+     *
+     */
+    removeAttribute: function(key) {
+        this._checkElement();
+        this._element.removeAttribute(key);
         return this;
     },
 
@@ -593,6 +692,99 @@ Package('tupai.ui')
         return this._element.classList.contains(name);
     },
 
+<span id='tupai-ui-View-method-bindEvents'>    /**
+</span>     * bind event to element and children
+     * &lt;div&gt;
+     *     &lt;button data-ch-click=&quot;didClickButton&quot;&gt;click me!&lt;button&gt;
+     * &lt;/div&gt;
+     * see {@link tupai.ui.ViewEvents#bind}
+     * @param {String} event
+     * @param {Function} callback
+     * @param {Boolean} useCapture
+     *
+     */
+    bindEvents: function(delegate) {
+        if(!delegate) return;
+
+        this._checkElement();
+        var elements = this._element.querySelectorAll('*[data-ch-click]');
+        for (var i=0,len=elements.length; i&lt;len; ++i) {
+            var elm = elements[i];
+            var click = cp.CommonUtil.getDataSet(elements[i], 'chClick');
+            var fn = this._parseFn(click);
+            if(!fn) {
+                throw new Error('can\'t parse click event. ' + click);
+            }
+            fn.args.push(elm);
+            this._bindEventToFn(elm, 'click', fn, delegate);
+        }
+    },
+
+    _bindEventToFn: function(elm, type, fnObj, delegate) {
+
+        var fn = delegate[fnObj.name];
+        if(typeof fn !== 'function') {
+            throw new Error('can\'t find function ' + fnObj.name + ' in baseViewDelegate.');
+        }
+        this._viewEvents.bind(elm, type, function() {
+            fn.apply(delegate, fnObj.args);
+        });
+    },
+
+    _parseFn: function(str) {
+
+        str = cp.CommonUtil.trim(str);
+        var matchs = str.match(/^(\w+)([(]?)([^()]*)([)]?)$/);
+        if(!matchs) return undefined;
+        if(!matchs[1] ||
+           (matchs[2] &amp;&amp; !matchs[4]) ||
+           (!matchs[2] &amp;&amp; matchs[4])
+          ) return undefined;
+
+        var fnName = matchs[1];
+        var params = cp.CommonUtil.trim(matchs[3]);
+        var args=[];
+        var checkers = [
+            function(s) {
+                var m = s.match(/^['&quot;]{1}(.*)['&quot;]{1}$/);
+                if(!m) return;
+                args.push(m[1]);
+                return true;
+            },
+            function(s) {
+                var i = parseFloat(s);
+                if(!Number.isNaN(i)) {
+                    args.push(i);
+                    return true;
+                }
+            }
+        ];
+
+        if(params) {
+            params = params.split(',');
+            for(var i=0, n=params.length; i&lt;n; i++) {
+                //check params
+                var p = cp.CommonUtil.trim(params[i]);
+                var m=false;
+                for(var j=0, jn=checkers.length; j&lt;jn; j++) {
+                    var c = checkers[j];
+                    if(c(p)) {
+                        m=true;
+                        break;
+                    }
+                }
+                if(!m) {
+                    throw new Error('can\'t parse parameter ' + p);
+                }
+            }
+        }
+
+        return {
+            name: fnName,
+            args: args
+        };
+    },
+
 <span id='tupai-ui-View-method-bind'>    /**
 </span>     * bind event to element
      * see {@link tupai.ui.ViewEvents#bind}
@@ -614,7 +806,7 @@ Package('tupai.ui')
      *
      */
     unbind: function(event, callback) {
-        this._checkElement();
+        if(!this._element) return;
         this._viewEvents.unbind(this._element, event, callback);
     },
 
@@ -642,8 +834,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'none') return;
         this.setStyle('display', 'none');
         this.fire('hide');
-        if(this._baseViewDelete &amp;&amp; this._baseViewDelete.viewDidHide) {
-            this._baseViewDelete.viewDidHide(this);
+        if(this._baseViewDelegate &amp;&amp; this._baseViewDelegate.viewDidHide) {
+            this._baseViewDelegate.viewDidHide(this);
         }
     },
 
@@ -666,8 +858,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'block') return;
         this.setStyle('display', null);
         this.fire('show');
-        if(this._baseViewDelete &amp;&amp; this._baseViewDelete.viewDidShow) {
-            this._baseViewDelete.viewDidShow(this);
+        if(this._baseViewDelegate &amp;&amp; this._baseViewDelegate.viewDidShow) {
+            this._baseViewDelegate.viewDidShow(this);
         }
     },
 
@@ -737,7 +929,7 @@ Package('tupai.ui')
     animate : function (view, container, direction, finish) {
     }
 
-});}).run(function(cp) {
+});}).define(function(cp) {
 
     cp.View.cssNumber = {
         'width': true,

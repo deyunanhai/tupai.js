@@ -27,7 +27,7 @@
  *     .use('tupai.events.Events')
  *     .run(function(cp) {
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', function(e) {
+ *         events.on('hoge', function(e) {
  *             logOnBody('hoge is fired. message is ' + e.message);
  *         });
  *
@@ -45,7 +45,7 @@
  *     });}).run(function(cp) {
  *         var test = new cp.Test();
  *         var events = new cp.Events();
- *         events.addEventListener('hoge', test);
+ *         events.on('hoge', test);
  *         events.fireDelegate('hoge', 'didReciveMessage', {message: 'hoge hoge'});
  *     });
  *
@@ -55,11 +55,8 @@
  *     .use('tupai.events.Events')
  *     .define('Model', function(cp) { return cp.Events.extend({
  *         initialize: function() {
- *             this.SUPER.initialize.apply(this, arguments);
+ *             cp.Events.prototype.initialize.apply(this, arguments);
  *             this._map = {};
- *         },
- *         on: function(name, cb) {
- *             this.SUPER.addEventListener.apply(this, arguments);
  *         },
  *         set: function(obj) {
  *             if(!obj) return;
@@ -112,13 +109,20 @@ Package('tupai.events')
     fire: function(type, parameter) {
         var chain = this._events[type];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i&lt;n;i++) {
                 if(!chain[i]) continue;
 
-                chain[i](e);
+                chain[i].apply(this, [e]);
                 if(e.stop) break;
             }
         }
@@ -134,15 +138,23 @@ Package('tupai.events')
     fireDelegate: function(name, type, parameter) {
         var chain = this._events[name];
         if(chain) {
-            var e = parameter || {};
+            var e;
+            if(typeof parameter === 'object') {
+                e = parameter;
+            } else {
+                e = {
+                    val: parameter
+                };
+            }
             e.targetName = name;
             e.eventName = type;
             e.stop = false;
             for(var i=0,n=chain.length;i&lt;n;i++) {
-                if(!chain[i]) continue;
+                var delegate = chain[i];
+                if(!delegate) continue;
 
-                if(chain[i][type]) {
-                    chain[i][type](e);
+                if(delegate[type]) {
+                    delegate[type](e);
                     if(e.stop) break;
                 }
             }
@@ -150,13 +162,25 @@ Package('tupai.events')
     },
 
 <span id='tupai-events-Events-method-addEventListener'>    /**
+</span>     * same as on.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+    *  @deprecated 0.4 Use {@link tupai.events.Events#on} instead.
+     *
+     */
+    addEventListener: function(type, listener, first) {
+        return this.on(type, listener, first);
+    },
+
+<span id='tupai-events-Events-method-on'>    /**
 </span>     * add event listener
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      * @param {boolean} [first=true] add listener to the first of events pool
      *
      */
-    addEventListener: function(type, listener, first) {
+    on: function(type, listener, first) {
         var chain = this._events[type];
         if(!chain) {
             this._events[type] = chain = [];
@@ -168,13 +192,48 @@ Package('tupai.events')
         return true;
     },
 
+<span id='tupai-events-Events-method-once'>    /**
+</span>     * add once event listener
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+     * @param {boolean} [first=true] add listener to the first of events pool
+     *
+     */
+    once: function(type, listener, first) {
+        if (typeof listener !== 'function')
+            throw TypeError('listener must be a function');
+
+        var fired = false;
+
+        function g() {
+            this.off(type, g);
+
+            if (!fired) {
+                fired = true;
+                listener.apply(this, arguments);
+            }
+        }
+        this.on(type, g, first);
+    },
+
 <span id='tupai-events-Events-method-removeEventListener'>    /**
+</span>     * same as off.
+     * @param {String} type eventType
+     * @param {Object} listener function or class instance
+    *  @deprecated 0.4 Use {@link tupai.events.Events#off} instead.
+     *
+     */
+    removeEventListener: function(type, listener) {
+        return this.off(type, listener);
+    },
+
+<span id='tupai-events-Events-method-off'>    /**
 </span>     * remove listener from events pool
      * @param {String} type eventType
      * @param {Object} listener function or class instance
      *
      */
-    removeEventListener: function(type, listener) {
+    off: function(type, listener) {
         var chain = this._events[type];
         if(!chain) return;
         var index;

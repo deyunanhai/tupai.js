@@ -97,6 +97,8 @@ Package('tupai.net')
         if(config) {
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
+            this._defaultRequestType = config.defaultRequestType;
+            this._timeout = config.timeout;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -139,7 +141,7 @@ Package('tupai.net')
 
         var requestMethod = request.getMethod();
         var requestData = request.getData();
-        var requestType = request.getType();
+        var requestType = request.getType() || this._defaultRequestType;
 
         if(this._fixAjaxCache &amp;&amp; (!requestMethod || requestMethod.toLowerCase() === 'get')) {
             var p = '__t='+(Date.now?Date.now():(+new Date()));
@@ -149,7 +151,7 @@ Package('tupai.net')
         }
 
         var THIS = this;
-        cp.HttpUtil.ajax(
+        return cp.HttpUtil.ajax(
             url,
             function(responseText, xhr) {
                 var response = THIS._getResponseFromXhr(xhr, responseText);
@@ -167,7 +169,8 @@ Package('tupai.net')
                 method: requestMethod,
                 data: requestData,
                 type: requestType,
-                header: requestHeader
+                header: requestHeader,
+                timeout: this._timeout
             }
         );
     },
@@ -183,7 +186,7 @@ Package('tupai.net')
         if(!request) {
             throw new Error('missing required parameter.');
         }
-        this._execute(request, responseDelegate);
+        return this._execute(request, responseDelegate);
     }
 });});
 </pre>

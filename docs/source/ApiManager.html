@@ -222,19 +222,36 @@ Package('tupai.model')
         var THIS = this;
         this._client.execute(request, {
             didHttpRequestSuccess: function(response, request) {
-                THIS._responseDelegate &amp;&amp;
-                THIS._responseDelegate.didHttpRequestSuccess &amp;&amp;
-                THIS._responseDelegate.didHttpRequestSuccess(name, requestName, response, request);
 
-                THIS.notify(name, requestName, 'didHttpRequestSuccess', response, request);
+                var needNotify = true;
+                if(THIS._responseDelegate &amp;&amp; THIS._responseDelegate.didHttpRequestSuccess) {
+                    THIS._responseDelegate.didHttpRequestSuccess(
+                        name, requestName, response, request
+                    );
+                    if(THIS._responseDelegate.handleNotify) needNotify = false;
+                }
+
+                if(needNotify) {
+                    THIS.notify(
+                        name, requestName, 'didHttpRequestSuccess', response, request
+                    );
+                }
                 if(typeof(success) == 'function') success(name, requestName, response, request);
             },
             didHttpRequestError: function(response, request) {
-                THIS._responseDelegate &amp;&amp;
-                THIS._responseDelegate.didHttpRequestError &amp;&amp;
-                THIS._responseDelegate.didHttpRequestError(name, requestName, response, request);
+                var needNotify = true;
+                if(THIS._responseDelegate &amp;&amp; THIS._responseDelegate.didHttpRequestError) {
+                    THIS._responseDelegate.didHttpRequestError(
+                        name, requestName, response, request
+                    );
+                    if(THIS._responseDelegate.handleNotify) needNotify = false;
+                }
 
-                THIS.notify(name, requestName, 'didHttpRequestError', response, request);
+                if(needNotify) {
+                    THIS.notify(
+                        name, requestName, 'didHttpRequestError', response, request
+                    );
+                }
                 if(typeof(error) == 'function') error(name, requestName, response, request);
             },
         });

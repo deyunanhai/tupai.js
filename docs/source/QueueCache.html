@@ -17,7 +17,6 @@
 <body onload="prettyPrint(); highlight();">
   <pre class="prettyprint lang-js">/*
  * TODO:
- * - uniq CacheEngine
  * - sorted CacheEngine
  * */
 
@@ -41,6 +40,7 @@ Package('tupai.model.caches')
      * @param {String} name cache name
      * @param {Object} options
      * @param {Object} [options.memCache] memory cache config
+     * @param {Object} [options.uniqField] memory cache config
      * @param {Number} [options.memCache.limit] memory cache limit
      * @param {Number} [options.memCache.overflowRemoveSize] number of remove items when reach limit of cache
      * @param {Object} [options.localStorage] use localStorage
@@ -64,20 +64,38 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
+                var d = JSON.parse(dataText);
+                if(d.m &amp;&amp; d.d) {
+                    this._storage.swapStorage(d.d);
+                    this._meta = d.m;
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
         }
 
+        this._uniqField = options.uniqField;
         this._delegate = delegate;
         this._name = name;
     },
+
+<span id='tupai-model-caches-QueueCache-method-getCreated'>    /**
+</span>     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     */
+    getCreated: function() {
+        return this._meta &amp;&amp; this._meta.created;
+    },
+
     didMemCacheGC: function() {
         this._saveToNative();
         this._delegate &amp;&amp;
@@ -107,7 +125,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
+            }
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage.getStorage()
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
 
@@ -141,6 +171,22 @@ Package('tupai.model.caches')
         return this._attributes &amp;&amp; this._attributes[name];
     },
 
+<span id='tupai-model-caches-QueueCache-method-setAttribute'>    /**
+</span>     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
+    },
+
 <span id='tupai-model-caches-QueueCache-method-push'>    /**
 </span>     * push data to cache. the method will not notify cache changed.
      * you need to call end function to end edit and notify cache changed.
@@ -148,6 +194,8 @@ Package('tupai.model.caches')
      *
      */
     push: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
         if(data instanceof Array) {
             this._storage.concat(data);
         } else {
@@ -161,11 +209,41 @@ Package('tupai.model.caches')
      *
      */
     unshift: function(data) {
+
+        if(this._uniqField) data = this._removeDup(data);
+
         if(data instanceof Array) {
             this._storage.concatFirst(data);
         } else {
             this._storage.unshift(data);
         }
+    },
+
+    _removeDup: function(data) {
+
+        var newKeys = {};
+        var uniqField = this._uniqField;
+        if(data instanceof Array) {
+            var newData=[];
+            for(var i=0, n=data.length; i&lt;n; i++) {
+                var r = data[i];
+                var key = r[uniqField];
+                if(!newKeys[key]) {
+                    newData.push(r);
+                }
+                newKeys[key] = true;
+            }
+            data = newData;
+        } else {
+            newKeys[data[uniqField]] = true;
+        }
+
+        this._storage.filter(function(d) {
+            var key = d[uniqField];
+            return !(newKeys[key]);
+        });
+
+        return data;
     },
 
 <span id='tupai-model-caches-QueueCache-method-filter'>    /**

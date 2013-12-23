@@ -30,14 +30,17 @@
  *     &lt;/body&gt;
  */
 Package('tupai')
-.use('tupai.TransitManager')
+.use('tupai.events.Events')
 .use('tupai.ui.View')
 .use('tupai.TransitManager')
+.use('tupai.PushStateTransitManager')
 .define('Window', function(cp) { return cp.View.extend({
 
 <span id='tupai-Window-method-initialize'>    /**
 </span>     * initialize
      * @param [config] window config
+     * @param [config.routes]
+     * @param [config.disablePushState] disable html5 history api
      * ### example with TransisManager
      *     new cp.Window({
      *         routes: {
@@ -55,12 +58,13 @@ Package('tupai')
 		cp.View.prototype.initialize.apply(this,[]);
 
         this._config = config || {};
+        this._events = new cp.Events();
         if(this._config.routes) {
-            //if(config.disablePushState || !('state' in window.history)) {
+            if(config.disablePushState || !('state' in window.history)) {
                 this._transitManager = new cp.TransitManager(this, config.routes);
-            /*} else {
-                this._transitManager = new cp.PushStateTransitManager(this, config.routes);
-            }*/
+            } else {
+                this._transitManager = new cp.PushStateTransitManager(this, config.routes, config.pushState);
+            }
             this._transitManager.setDelegate(this);
         } else if(this._config.rootViewController) {
             this._rootViewControllerClasszz = this._config.rootViewController;
@@ -79,25 +83,87 @@ Package('tupai')
 <span id='tupai-Window-method-back'>    /**
 </span>     * {@link tupai.TransitManager#back}
      */
-    back: function () {
+    back: function (targetUrl, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.back.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            targetUrl: targetUrl,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.back', eventParams);
+        this.fireDelegate('transit', 'didWindowBack', eventParams);
+    },
+
+<span id='tupai-Window-method-backTo'>    /**
+</span>     * {@link tupai.TransitManager#backTo}
+     */
+    backTo: function(index) {
+        if(!this._transitManager) return;
+        this._transitManager.backTo.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            index: index
+        };
+        this.fire('transit.did.backTo', eventParams);
+        this.fireDelegate('transit', 'didWindowBackTo', eventParams);
     },
 
 <span id='tupai-Window-method-transitWithHistory'>    /**
 </span>     * {@link tupai.TransitManager#transitWithHistory}
      */
-    transitWithHistory: function () {
+    transitWithHistory: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transitWithHistory.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transitWithHistory', eventParams);
+        this.fireDelegate('transit', 'didWindowTransitWithHistory', eventParams);
+    },
+
+<span id='tupai-Window-method-getTitle'>    /**
+</span>     * {@link tupai.TransitManager#getTitle}
+     */
+    getTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.getTitle.apply(this._transitManager, arguments);
+    },
+
+<span id='tupai-Window-method-setTitle'>    /**
+</span>     * {@link tupai.TransitManager#setTitle}
+     */
+    setTitle: function() {
+        if(!this._transitManager) return '';
+        return this._transitManager.setTitle.apply(this._transitManager, arguments);
+    },
+
+<span id='tupai-Window-method-getTransitHistories'>    /**
+</span>     * {@link tupai.TransitManager#getTransitHistories}
+     */
+    getTransitHistories: function () {
+        if(!this._transitManager) return;
+        return this._transitManager.getHistories.apply(this._transitManager, arguments);
     },
 
 <span id='tupai-Window-method-transit'>    /**
 </span>     * {@link tupai.TransitManager#transit}
      */
-    transit: function () {
+    transit: function (url, options, transitOptions) {
         if(!this._transitManager) return;
         this._transitManager.transit.apply(this._transitManager, arguments);
+
+        var eventParams = {
+            url: url,
+            options: options,
+            transitOptions: transitOptions
+        };
+        this.fire('transit.did.transit', eventParams);
+        this.fireDelegate('transit', 'didWindowTransit', eventParams);
     },
 
 <span id='tupai-Window-method-showRoot'>    /**
@@ -107,27 +173,38 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
-        url = url || '/root';
-        if(this._transitManager) return this.transit(url, options);
-        else if(!this._rootViewControllerClasszz) throw new Error('missing root view controller.');
+        var transitOptions = {entry: true};
+        if(this._transitManager) {
+            return this.transit(url, options, transitOptions);
+        } else if(!this._rootViewControllerClasszz) {
+            throw new Error('missing root view controller.');
+        }
 
         var controller = new this._rootViewControllerClasszz(this);
-
-        var name;
-        var pos = url.lastIndexOf('/');
-        if(pos &gt;= 0) name = url.substring(pos+1);
-        else name = url;
-
-        controller.viewInit(options, url, name);
-        this.transitController(controller, url, options,{});
+        controller.viewInit(options, '/root', transitOptions);
+        this.transitController(controller, '/root', options, transitOptions);
     },
 
     transitController: function (controller, url, options, transitOptions) {
         //console.log('transit by window ' + url);
-        var view = controller.getContentView();
-        if(!view) throw new Error('cannot get contentView from ViewController');
-        this._displayView(view, transitOptions);
-        this._currentController = controller;
+        if(!controller) {
+            // show 404
+            throw new Error('can\t found controller.('+url+')');
+        } else {
+            var view = controller.getContentView();
+            if(!view) throw new Error('cannot get contentView from ViewController');
+            this._displayView(view, transitOptions);
+            this._currentController = controller;
+
+            var eventParams = {
+                controller: controller,
+                url: url,
+                options: options,
+                transitOptions: transitOptions
+            };
+            this.fire('transit.did.transitController', eventParams);
+            this.fireDelegate('transit', 'didWindowTransitController', eventParams);
+        }
     },
 
     getCurrentController: function() {
@@ -215,7 +292,56 @@ Package('tupai')
         if(firsttime) {
             this.didLoad &amp;&amp; this.didLoad();
         }
-	}
+	},
+
+<span id='tupai-Window-method-fire'>    /**
+</span>     * {@link tupai.util.Events#fire}
+     */
+    fire: function() {
+        this._events.fire.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-fireDelegate'>    /**
+</span>     * {@link tupai.util.Events#fireDelegate}
+     */
+    fireDelegate: function() {
+        this._events.fireDelegate.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-on'>    /**
+</span>     * {@link tupai.util.Events#on}
+     */
+    on: function() {
+        this._events.on.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-once'>    /**
+</span>     * {@link tupai.util.Events#once}
+     */
+    once: function() {
+        this._events.once.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-addEventListener'>    /**
+</span>     * {@link tupai.util.Events#addEventListener}
+     */
+    addEventListener: function() {
+        this._events.addEventListener.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-removeEventListener'>    /**
+</span>     * {@link tupai.util.Events#removeEventListener}
+     */
+    removeEventListener: function() {
+        this._events.removeEventListener.apply(this._events, arguments);
+    },
+
+<span id='tupai-Window-method-off'>    /**
+</span>     * {@link tupai.util.Events#off}
+     */
+    off: function() {
+        this._events.off.apply(this._events, arguments);
+    }
 });});
 
 </pre>
