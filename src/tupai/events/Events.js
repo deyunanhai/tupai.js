@@ -236,6 +236,23 @@ Package('tupai.events')
     },
 
     /**
+     * get events size
+     * @param {String} type eventType
+     * @return size
+     *
+     */
+    size: function(type) {
+        var chain = this._events[type];
+        if(!chain) return 0;
+        var cnt = 0;
+        for(var i=0,n=chain.length;i<n;i++) {
+            if(!chain[i]) continue;
+            cnt++;
+        }
+        return cnt;
+    },
+
+    /**
      * clear all listeners
      *
      */
