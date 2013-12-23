@@ -14,8 +14,8 @@
  * -  viewDidHide(view);
  *
  * ### The delegate commands from TransitManager
- * -  viewInit(options, url, name);
- * -  transitController(controller, url, options);
+ * -  viewInit(options, url, transitOptions);
+ * -  transitController(controller, url, options, transitOptions);
  *
  * ### The delegate commands from TableView
  * -  numberOfRows(tableView);
@@ -197,6 +197,20 @@ Package('tupai')
     },
 
     /**
+     * get Cache by name
+     */
+    getCacheManager: function() {
+        return this._app.getCacheManager();
+    },
+
+    /**
+     * get Cache by name
+     */
+    getApiManager: function(name) {
+        return this._app.getApiManager(name);
+    },
+
+    /**
      * get the content view object
      */
 	getContentView: function() {
@@ -255,8 +269,8 @@ Package('tupai')
      * you should ovveride this function and create a content view by setContentView
      * @param {Object} options
      * @param {String} url
-     * @param {String} name
+     * @param {Object} transit options
      */
-	viewInit: function(options, url, name) {
+	viewInit: function(options, url, transitOptions) {
 	}
 });});

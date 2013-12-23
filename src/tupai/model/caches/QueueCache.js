@@ -47,14 +47,22 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
+                var d = JSON.parse(dataText);
+                if(d.m && d.d) {
+                    this._storage.swapStorage(d.d);
+                    this._meta = d.m;
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
         }
 
@@ -62,6 +70,15 @@ Package('tupai.model.caches')
         this._delegate = delegate;
         this._name = name;
     },
+
+    /**
+     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     */
+    getCreated: function() {
+        return this._meta && this._meta.created;
+    },
+
     didMemCacheGC: function() {
         this._saveToNative();
         this._delegate &&
@@ -91,7 +108,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
+            }
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage.getStorage()
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
 
@@ -123,6 +152,22 @@ Package('tupai.model.caches')
      */
     getAttribute: function(name) {
         return this._attributes && this._attributes[name];
+    },
+
+    /**
+     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
     },
 
     /**

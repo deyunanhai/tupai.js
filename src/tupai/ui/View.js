@@ -36,7 +36,7 @@ Package('tupai.ui')
     _children: undefined,
     _rendered: undefined,
     _element: undefined,
-    _baseViewDelete: undefined,
+    _baseViewDelegate: undefined,
     _events: undefined,
 
     /**
@@ -54,6 +54,7 @@ Package('tupai.ui')
         this._events = undefined;
         this._didLoadFlg = false;
         this._viewIDMap = undefined;
+        this._spViews = undefined;
         this._templateEngine = cp.TemplateEngine;
         this._viewEvents = cp.ViewEvents;
         if(args) {
@@ -138,7 +139,7 @@ Package('tupai.ui')
      * -  viewDidHide(view);
      */
     setDelegate: function(delegate) {
-        this._baseViewDelete = delegate;
+        this._baseViewDelegate = delegate;
     },
 
     /*
@@ -184,6 +185,7 @@ Package('tupai.ui')
         if(!this._parentAdded) {
             parentNode.appendChild(this._element);
             this._parentAdded = true;
+            this.bindEvents(this._baseViewDelegate);
         }
 
         this._didRender();
@@ -196,8 +198,8 @@ Package('tupai.ui')
         if(this.didRender) {
             this.didRender();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
-            this._baseViewDelete.viewDidRender(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidRender) {
+            this._baseViewDelegate.viewDidRender(this);
         }
         this.fire('didRender');
     },
@@ -206,8 +208,8 @@ Package('tupai.ui')
         if(this.didLoad) {
             this.didLoad();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidLoad) {
-            this._baseViewDelete.viewDidLoad(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidLoad) {
+            this._baseViewDelegate.viewDidLoad(this);
         }
         this.fire('didLoad');
         this._didLoadFlg = true;
@@ -217,6 +219,7 @@ Package('tupai.ui')
 
         var containerNode = this._element;
         var renderView = function(child) {
+            if(!child) return;
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
             if(firsttime) {
@@ -230,6 +233,11 @@ Package('tupai.ui')
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
                 renderView(this._viewIDMap[id]);
+            }
+        }
+        if(this._spViews) {
+            for(var i=0, n=this._spViews.length; i<n; i++) {
+                renderView(this._spViews[i]);
             }
         }
     },
@@ -265,11 +273,7 @@ Package('tupai.ui')
     _createViewIDMap: function() {
         if(this._viewIDMap) return;
 
-        var viewIDMap = {};
-        var elements = this._element.querySelectorAll('*[data-ch-id]');
-        for (var i=0,len=elements.length; i<len; ++i) {
-            var elm = elements[i];
-            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+        var createView = function(elm) {
             var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
             var view;
             if(viewClsNm) {
@@ -281,10 +285,29 @@ Package('tupai.ui')
             view._element = elm;
             view._parent = this;
             view._parentAdded = true;
+            return view;
+        };
 
-            viewIDMap[id] = view;
+        var viewIDMap = {};
+        var elements = this._element.querySelectorAll('*[data-ch-id]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+            if(!id) continue;
+            viewIDMap[id] = createView(elm);
         }
+
+        var arr = [];
+        var elements = this._element.querySelectorAll('*[data-ch-view]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+            if(id) continue;
+            arr.push(createView(elm));
+        }
+
         this._viewIDMap = viewIDMap;
+        this._spViews = (arr.length>0?arr:undefined);
     },
     _checkElement: function() {
         if(this._element) return;
@@ -412,6 +435,15 @@ Package('tupai.ui')
                 this._removeChild(child);
             }
             this._viewIDMap = {};
+
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i<n; i++) {
+                    var child = this._spViews[i];
+                    child.clearChildren();
+                    this._removeChild(child);
+                }
+                this._spViews = undefined;
+            }
         }
         return this.clearChildrenByRange(0);
     },
@@ -480,6 +512,15 @@ Package('tupai.ui')
                     return child;
                 }
             }
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i<n; i++) {
+                    if(child === this._spViews[i]) {
+                        this._removeChild(child);
+                        delete this._spViews[i];
+                        return child;
+                    }
+                }
+            }
             return null;
         } else {
             return this.removeChildAt(this._children.indexOf(child));
@@ -513,12 +554,16 @@ Package('tupai.ui')
         if(!child._element) {
             return;
         }
-        child._element.parentNode.removeChild(child._element);
+        if(child._element.parentNode) {
+            child._element.parentNode.removeChild(child._element);
+        } else {
+            //allready removed from dom.
+        }
         if(child.didUnload) {
             child.didUnload();
         }
-        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
+        if(child._baseViewDelegate && child._baseViewDelegate.viewDidUnload) {
+            child._baseViewDelegate.viewDidUnload(child);
         }
         child.fire('didUnload');
     },
@@ -631,6 +676,99 @@ Package('tupai.ui')
     },
 
     /**
+     * bind event to element and children
+     * <div>
+     *     <button data-ch-click="didClickButton">click me!<button>
+     * </div>
+     * see {@link tupai.ui.ViewEvents#bind}
+     * @param {String} event
+     * @param {Function} callback
+     * @param {Boolean} useCapture
+     *
+     */
+    bindEvents: function(delegate) {
+        if(!delegate) return;
+
+        this._checkElement();
+        var elements = this._element.querySelectorAll('*[data-ch-click]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var click = cp.CommonUtil.getDataSet(elements[i], 'chClick');
+            var fn = this._parseFn(click);
+            if(!fn) {
+                throw new Error('can\'t parse click event. ' + click);
+            }
+            fn.args.push(elm);
+            this._bindEventToFn(elm, 'click', fn, delegate);
+        }
+    },
+
+    _bindEventToFn: function(elm, type, fnObj, delegate) {
+
+        var fn = delegate[fnObj.name];
+        if(typeof fn !== 'function') {
+            throw new Error('can\'t find function ' + fnObj.name + ' in baseViewDelegate.');
+        }
+        this._viewEvents.bind(elm, type, function() {
+            fn.apply(delegate, fnObj.args);
+        });
+    },
+
+    _parseFn: function(str) {
+
+        str = cp.CommonUtil.trim(str);
+        var matchs = str.match(/^(\w+)([(]?)([^()]*)([)]?)$/);
+        if(!matchs) return undefined;
+        if(!matchs[1] ||
+           (matchs[2] && !matchs[4]) ||
+           (!matchs[2] && matchs[4])
+          ) return undefined;
+
+        var fnName = matchs[1];
+        var params = cp.CommonUtil.trim(matchs[3]);
+        var args=[];
+        var checkers = [
+            function(s) {
+                var m = s.match(/^['"]{1}(.*)['"]{1}$/);
+                if(!m) return;
+                args.push(m[1]);
+                return true;
+            },
+            function(s) {
+                var i = parseFloat(s);
+                if(!Number.isNaN(i)) {
+                    args.push(i);
+                    return true;
+                }
+            }
+        ];
+
+        if(params) {
+            params = params.split(',');
+            for(var i=0, n=params.length; i<n; i++) {
+                //check params
+                var p = cp.CommonUtil.trim(params[i]);
+                var m=false;
+                for(var j=0, jn=checkers.length; j<jn; j++) {
+                    var c = checkers[j];
+                    if(c(p)) {
+                        m=true;
+                        break;
+                    }
+                }
+                if(!m) {
+                    throw new Error('can\'t parse parameter ' + p);
+                }
+            }
+        }
+
+        return {
+            name: fnName,
+            args: args
+        };
+    },
+
+    /**
      * bind event to element
      * see {@link tupai.ui.ViewEvents#bind}
      * @param {String} event
@@ -651,7 +789,7 @@ Package('tupai.ui')
      *
      */
     unbind: function(event, callback) {
-        this._checkElement();
+        if(!this._element) return;
         this._viewEvents.unbind(this._element, event, callback);
     },
 
@@ -679,8 +817,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'none') return;
         this.setStyle('display', 'none');
         this.fire('hide');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidHide) {
-            this._baseViewDelete.viewDidHide(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidHide) {
+            this._baseViewDelegate.viewDidHide(this);
         }
     },
 
@@ -703,8 +841,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'block') return;
         this.setStyle('display', null);
         this.fire('show');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidShow) {
-            this._baseViewDelete.viewDidShow(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidShow) {
+            this._baseViewDelegate.viewDidShow(this);
         }
     },
 

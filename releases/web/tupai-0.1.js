@@ -109,7 +109,7 @@
             }
             var src = mRemoteBaseUrl + classPath.split('.').join('/') + '.js';
             if(!mCacheEnabled) {
-                src += '?' + Date.now();
+                src += '?' + (Date.now?Date.now():(+new Date()));
             }
             s.src = src;
             document.getElementsByTagName('head')[0].appendChild(s);
@@ -932,7 +932,7 @@ Package('tupai.util')
 
         xhr.onreadystatechange = function() {
             if ( xhr.readyState === 4 ) {
-                if ( (xhr.status >= 200 && xhr.status < 300) || xhr.status == 0 ) {
+                if (xhr.status >= 200 && xhr.status < 300) {
                     success(xhr.responseText, xhr);
                 } else {
                     error(xhr);
@@ -948,6 +948,10 @@ Package('tupai.util')
             }
         }
 
+        if(options.timeout) {
+            xhr.timeout = options.timeout;
+            //xhr.ontimeout = function () { error(xhr); }
+        }
         //console.log(method + ' ' + url + ' -- ' + data);
         xhr.open(method, url, true);
 
@@ -1323,7 +1327,7 @@ Package('tupai.net')
 Package('tupai.util')
 .define('CommonUtil', function(cp) {
     var elm = document.createElement('div');
-    var getDataSet;
+    var getDataSet, getDataSets;
     if (!elm.dataset) {
         /*
         var camelize = function(str) {
@@ -1335,6 +1339,15 @@ Package('tupai.util')
         var toDash = function(str) {
             return str.replace(/([A-Z])/g, function(m) { return '-'+m.toLowerCase(); });
         };
+        var toCamel = function(str) {
+            var tokens = str.split('-');
+            for(var i=1, n=tokens.length; i<n; i++) {
+                var s = tokens[i];
+                if(!s[0]) continue;
+                tokens[i] = s[0].toUpperCase()+s.substring(1);
+            }
+            return tokens.join('');
+        };
         getDataSet = function(element, name) {
             var dataName = 'data-';
             var attrs = element.attributes;
@@ -1342,11 +1355,43 @@ Package('tupai.util')
 
             var attr = attrs[attrName];
             return attr && attr.value;
-        }
+        };
+        getDataSets = function(element, matchName) {
+            var attrs = element.attributes;
+            var datasets = {};
+            var regexp;
+            if(matchName) {
+                regexp = new RegExp(matchName);
+            }
+            for(var i=0, n=attrs.length; i<n; i++) {
+                var attr = attrs[i];
+                var name = attr.name;
+                if(/^data-/.test(name)) {
+                    var attrName  = toCamel(name.substring(5));
+                    if(regexp && !regexp.test(attrName)) continue;
+                    datasets[attrName] = attr.value;
+                }
+            }
+            return datasets;
+        };
     } else {
         getDataSet = function(element, name) {
             return element.dataset[name];
-        }
+        };
+        getDataSets = function(element, matchName) {
+
+            if(!matchName) {
+                return element.dataset;
+            }
+            var ret = {};
+            var datasets = element.dataset;
+            var regexp = new RegExp(matchName);
+            for(var name in datasets) {
+                if(!regexp.test(name)) continue;
+                ret[name] = datasets[name];
+            }
+            return ret;
+        };
     }
 
     var haveClassList = !!elm.classList;
@@ -1367,11 +1412,24 @@ Package('tupai.util')
         return !!url.match(/^(https?)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)$/);
     };
 
+    var trim;
+    if(String.prototype.trim) {
+        trim = function(s) {
+            return s.trim();
+        };
+    } else {
+        trim = function(s) {
+            return s.replace(/(^\s+)|(\s+$)/g, "");
+        };
+    }
+
     return {
         bind: bind,
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
+        trim: trim,
+        getDataSets: getDataSets,
         getDataSet: getDataSet
     };
 });
@@ -1420,6 +1478,8 @@ Package('tupai.ui')
 .define('TemplateEngine', function(cp) {
 
     var loopChName = function(tarElement, cb) {
+
+        if(!tarElement) throw new Error('loopChName failed. because element is undefined');
         var elements = tarElement.querySelectorAll('*[data-ch-name]');
         for (var i=0,len=elements.length; i<len; ++i) {
             var child = elements[i];
@@ -1435,6 +1495,7 @@ Package('tupai.ui')
 
     var bindToElement = function(tarElement, data) {
 
+        if(!tarElement) throw new Error('bindToElement failed. because element is undefined');
         loopChName(tarElement, function(name, child) {
             var value = cp.HashUtil.getValueByName(name, data);
             setValue(child, value);
@@ -2000,7 +2061,7 @@ Package('tupai')
 
         var initController = function(controller) {
             if(controller) {
-                (controller.viewInit && controller.viewInit(options, url, r));
+                (controller.viewInit && controller.viewInit(options, url, transitOptions));
             }
             if(!pController.transitController)
                 throw new Error('container controller must have transitController delegate function. ' + url);
@@ -2074,29 +2135,44 @@ Package('tupai')
         cp.TransitManager.prototype.initialize.apply(this, arguments);
 
         this._separator = (config && config.separator) || "#!";
-        var initialURL = location.href;
         var THIS = this;
         this._popEventHanlder=undefined;
-        window.addEventListener("popstate", function(jsevent) {
-            //console.log(jsevent);
-            var state = jsevent.state;
-            if(!state) return;
-            var url = state.url;
-            if(!url) return;
 
-            var hanlder = THIS._popEventHanlder;
-            if(hanlder) {
-                delete THIS._popEventHanlder;
-                hanlder();
-                return;
-            }
+        this._addPopStateEventListener = function() {
+            window.addEventListener("popstate", function(jsevent) {
+                //console.log(jsevent);
+                var state = jsevent.state;
+                if(!state || !state.url) {
+                    // no state
+                    var url = window.location.href;
+                    var entry = THIS._parseFromLocation();
+                    if(THIS._current) {
+                        var result = cp.TransitManager.prototype.transitWithHistory.apply(THIS, [entry.url, entry.options]);
+                        if(result) {
+                            THIS._replaceState();
+                        }
+                    }
 
-            THIS._history = state.history || [];
-            THIS._transit(
-                url,
-                state.options,
-                state.transitOptions);
-        });
+                    return;
+                }
+
+                var url = state.url;
+                var hanlder = THIS._popEventHanlder;
+                if(hanlder) {
+                    delete THIS._popEventHanlder;
+                    hanlder();
+                    return;
+                }
+
+                THIS._history = state.history || [];
+                THIS._transit(
+                    url,
+                    state.options,
+                    state.transitOptions);
+            });
+
+            THIS._addPopStateEventListener = function(){};
+        };
     },
     back: function (targetUrl, options, transitOptions) {
 
@@ -2203,6 +2279,9 @@ Package('tupai')
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
             this._replaceState();
+        }
+        if(transitOptions && transitOptions.entry) {
+            this._addPopStateEventListener();
         }
         return result;
     }
@@ -2996,14 +3075,22 @@ Package('tupai.model.caches')
         }
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
-                this._storage = JSON.parse(dataText);
+                var d = JSON.parse(dataText);
+                if(d.m && d.d) {
+                    this._storage = d.d;
+                    this._meta = d.m;
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
             for(var name in this._storage) {
                 this._size ++;
@@ -3027,6 +3114,15 @@ Package('tupai.model.caches')
     },
 
     /**
+     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     *
+     */
+    getCreated: function() {
+        return this._meta && this._meta.created;
+    },
+
+    /**
      * end edit the cache and notify cache has been changed
      * @param {Object} [options] custom options
      *
@@ -3046,6 +3142,22 @@ Package('tupai.model.caches')
     },
 
     /**
+     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
+    },
+
+    /**
      * query cache and return {@link tupai.model.DataSet DataSet}
      * @param {Object} args sess {@link tupai.model.DataSet}
      * @return {tupai.model.DataSet} DataSet
@@ -3057,7 +3169,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage);
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
+            }
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
     _cacheGC: function() {
@@ -3298,6 +3422,7 @@ Package('tupai.net')
             this._defaultRequestHeaders = config.defaultRequestHeaders;
             this._fixAjaxCache = !!config.fixAjaxCache;
             this._defaultRequestType = config.defaultRequestType;
+            this._timeout = config.timeout;
         }
         if(!this._defaultRequestHeaders) {
             this._defaultRequestHeaders = {
@@ -3350,7 +3475,7 @@ Package('tupai.net')
         }
 
         var THIS = this;
-        cp.HttpUtil.ajax(
+        return cp.HttpUtil.ajax(
             url,
             function(responseText, xhr) {
                 var response = THIS._getResponseFromXhr(xhr, responseText);
@@ -3368,7 +3493,8 @@ Package('tupai.net')
                 method: requestMethod,
                 data: requestData,
                 type: requestType,
-                header: requestHeader
+                header: requestHeader,
+                timeout: this._timeout
             }
         );
     },
@@ -3384,7 +3510,7 @@ Package('tupai.net')
         if(!request) {
             throw new Error('missing required parameter.');
         }
-        this._execute(request, responseDelegate);
+        return this._execute(request, responseDelegate);
     }
 });});
 /**
@@ -3425,7 +3551,7 @@ Package('tupai.ui')
     _children: undefined,
     _rendered: undefined,
     _element: undefined,
-    _baseViewDelete: undefined,
+    _baseViewDelegate: undefined,
     _events: undefined,
 
     /**
@@ -3443,6 +3569,7 @@ Package('tupai.ui')
         this._events = undefined;
         this._didLoadFlg = false;
         this._viewIDMap = undefined;
+        this._spViews = undefined;
         this._templateEngine = cp.TemplateEngine;
         this._viewEvents = cp.ViewEvents;
         if(args) {
@@ -3527,7 +3654,7 @@ Package('tupai.ui')
      * -  viewDidHide(view);
      */
     setDelegate: function(delegate) {
-        this._baseViewDelete = delegate;
+        this._baseViewDelegate = delegate;
     },
 
     /*
@@ -3573,6 +3700,7 @@ Package('tupai.ui')
         if(!this._parentAdded) {
             parentNode.appendChild(this._element);
             this._parentAdded = true;
+            this.bindEvents(this._baseViewDelegate);
         }
 
         this._didRender();
@@ -3585,8 +3713,8 @@ Package('tupai.ui')
         if(this.didRender) {
             this.didRender();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidRender) {
-            this._baseViewDelete.viewDidRender(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidRender) {
+            this._baseViewDelegate.viewDidRender(this);
         }
         this.fire('didRender');
     },
@@ -3595,8 +3723,8 @@ Package('tupai.ui')
         if(this.didLoad) {
             this.didLoad();
         }
-        if(this._baseViewDelete && this._baseViewDelete.viewDidLoad) {
-            this._baseViewDelete.viewDidLoad(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidLoad) {
+            this._baseViewDelegate.viewDidLoad(this);
         }
         this.fire('didLoad');
         this._didLoadFlg = true;
@@ -3606,6 +3734,7 @@ Package('tupai.ui')
 
         var containerNode = this._element;
         var renderView = function(child) {
+            if(!child) return;
             var firsttime = child._onHTMLRender(containerNode, args);
             child._onChildrenRender(args);
             if(firsttime) {
@@ -3619,6 +3748,11 @@ Package('tupai.ui')
         if(this._viewIDMap) {
             for(var id in this._viewIDMap) {
                 renderView(this._viewIDMap[id]);
+            }
+        }
+        if(this._spViews) {
+            for(var i=0, n=this._spViews.length; i<n; i++) {
+                renderView(this._spViews[i]);
             }
         }
     },
@@ -3654,11 +3788,7 @@ Package('tupai.ui')
     _createViewIDMap: function() {
         if(this._viewIDMap) return;
 
-        var viewIDMap = {};
-        var elements = this._element.querySelectorAll('*[data-ch-id]');
-        for (var i=0,len=elements.length; i<len; ++i) {
-            var elm = elements[i];
-            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+        var createView = function(elm) {
             var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
             var view;
             if(viewClsNm) {
@@ -3670,10 +3800,29 @@ Package('tupai.ui')
             view._element = elm;
             view._parent = this;
             view._parentAdded = true;
+            return view;
+        };
 
-            viewIDMap[id] = view;
+        var viewIDMap = {};
+        var elements = this._element.querySelectorAll('*[data-ch-id]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+            if(!id) continue;
+            viewIDMap[id] = createView(elm);
         }
+
+        var arr = [];
+        var elements = this._element.querySelectorAll('*[data-ch-view]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var id = cp.CommonUtil.getDataSet(elements[i], 'chId');
+            if(id) continue;
+            arr.push(createView(elm));
+        }
+
         this._viewIDMap = viewIDMap;
+        this._spViews = (arr.length>0?arr:undefined);
     },
     _checkElement: function() {
         if(this._element) return;
@@ -3801,6 +3950,15 @@ Package('tupai.ui')
                 this._removeChild(child);
             }
             this._viewIDMap = {};
+
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i<n; i++) {
+                    var child = this._spViews[i];
+                    child.clearChildren();
+                    this._removeChild(child);
+                }
+                this._spViews = undefined;
+            }
         }
         return this.clearChildrenByRange(0);
     },
@@ -3869,6 +4027,15 @@ Package('tupai.ui')
                     return child;
                 }
             }
+            if(this._spViews) {
+                for(var i=0, n=this._spViews.length; i<n; i++) {
+                    if(child === this._spViews[i]) {
+                        this._removeChild(child);
+                        delete this._spViews[i];
+                        return child;
+                    }
+                }
+            }
             return null;
         } else {
             return this.removeChildAt(this._children.indexOf(child));
@@ -3902,12 +4069,16 @@ Package('tupai.ui')
         if(!child._element) {
             return;
         }
-        child._element.parentNode.removeChild(child._element);
+        if(child._element.parentNode) {
+            child._element.parentNode.removeChild(child._element);
+        } else {
+            //allready removed from dom.
+        }
         if(child.didUnload) {
             child.didUnload();
         }
-        if(child._baseViewDelete && child._baseViewDelete.viewDidUnload) {
-            child._baseViewDelete.viewDidUnload(child);
+        if(child._baseViewDelegate && child._baseViewDelegate.viewDidUnload) {
+            child._baseViewDelegate.viewDidUnload(child);
         }
         child.fire('didUnload');
     },
@@ -4020,6 +4191,99 @@ Package('tupai.ui')
     },
 
     /**
+     * bind event to element and children
+     * <div>
+     *     <button data-ch-click="didClickButton">click me!<button>
+     * </div>
+     * see {@link tupai.ui.ViewEvents#bind}
+     * @param {String} event
+     * @param {Function} callback
+     * @param {Boolean} useCapture
+     *
+     */
+    bindEvents: function(delegate) {
+        if(!delegate) return;
+
+        this._checkElement();
+        var elements = this._element.querySelectorAll('*[data-ch-click]');
+        for (var i=0,len=elements.length; i<len; ++i) {
+            var elm = elements[i];
+            var click = cp.CommonUtil.getDataSet(elements[i], 'chClick');
+            var fn = this._parseFn(click);
+            if(!fn) {
+                throw new Error('can\'t parse click event. ' + click);
+            }
+            fn.args.push(elm);
+            this._bindEventToFn(elm, 'click', fn, delegate);
+        }
+    },
+
+    _bindEventToFn: function(elm, type, fnObj, delegate) {
+
+        var fn = delegate[fnObj.name];
+        if(typeof fn !== 'function') {
+            throw new Error('can\'t find function ' + fnObj.name + ' in baseViewDelegate.');
+        }
+        this._viewEvents.bind(elm, type, function() {
+            fn.apply(delegate, fnObj.args);
+        });
+    },
+
+    _parseFn: function(str) {
+
+        str = cp.CommonUtil.trim(str);
+        var matchs = str.match(/^(\w+)([(]?)([^()]*)([)]?)$/);
+        if(!matchs) return undefined;
+        if(!matchs[1] ||
+           (matchs[2] && !matchs[4]) ||
+           (!matchs[2] && matchs[4])
+          ) return undefined;
+
+        var fnName = matchs[1];
+        var params = cp.CommonUtil.trim(matchs[3]);
+        var args=[];
+        var checkers = [
+            function(s) {
+                var m = s.match(/^['"]{1}(.*)['"]{1}$/);
+                if(!m) return;
+                args.push(m[1]);
+                return true;
+            },
+            function(s) {
+                var i = parseFloat(s);
+                if(!Number.isNaN(i)) {
+                    args.push(i);
+                    return true;
+                }
+            }
+        ];
+
+        if(params) {
+            params = params.split(',');
+            for(var i=0, n=params.length; i<n; i++) {
+                //check params
+                var p = cp.CommonUtil.trim(params[i]);
+                var m=false;
+                for(var j=0, jn=checkers.length; j<jn; j++) {
+                    var c = checkers[j];
+                    if(c(p)) {
+                        m=true;
+                        break;
+                    }
+                }
+                if(!m) {
+                    throw new Error('can\'t parse parameter ' + p);
+                }
+            }
+        }
+
+        return {
+            name: fnName,
+            args: args
+        };
+    },
+
+    /**
      * bind event to element
      * see {@link tupai.ui.ViewEvents#bind}
      * @param {String} event
@@ -4040,7 +4304,7 @@ Package('tupai.ui')
      *
      */
     unbind: function(event, callback) {
-        this._checkElement();
+        if(!this._element) return;
         this._viewEvents.unbind(this._element, event, callback);
     },
 
@@ -4068,8 +4332,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'none') return;
         this.setStyle('display', 'none');
         this.fire('hide');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidHide) {
-            this._baseViewDelete.viewDidHide(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidHide) {
+            this._baseViewDelegate.viewDidHide(this);
         }
     },
 
@@ -4092,8 +4356,8 @@ Package('tupai.ui')
         if(this.getStyle('display') === 'block') return;
         this.setStyle('display', null);
         this.fire('show');
-        if(this._baseViewDelete && this._baseViewDelete.viewDidShow) {
-            this._baseViewDelete.viewDidShow(this);
+        if(this._baseViewDelegate && this._baseViewDelegate.viewDidShow) {
+            this._baseViewDelegate.viewDidShow(this);
         }
     },
 
@@ -4525,14 +4789,22 @@ Package('tupai.model.caches')
 
         if(options.localStorage) {
             this._nativeStorage = window.localStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         } else if(options.sessionStorage) {
             this._nativeStorage = window.sessionStorage;
+            this._nativeStorageDefaultMeta = { version: 1 };
         }
         if(this._nativeStorage) {
             this._nativeStorageKey = '__tupai_'+name;
-            var dataText = this._nativeStorage[this._nativeStorageKey];
+            var dataText = this._nativeStorage.getItem(this._nativeStorageKey);
             if(dataText) {
-                this._storage.swapStorage(JSON.parse(dataText));
+                var d = JSON.parse(dataText);
+                if(d.m && d.d) {
+                    this._storage.swapStorage(d.d);
+                    this._meta = d.m;
+                } else {
+                    console.warn('unknow native storage format!');
+                }
             }
         }
 
@@ -4540,6 +4812,15 @@ Package('tupai.model.caches')
         this._delegate = delegate;
         this._name = name;
     },
+
+    /**
+     * get the storage data created timestamp
+     * this function will return null when memory cache only.
+     */
+    getCreated: function() {
+        return this._meta && this._meta.created;
+    },
+
     didMemCacheGC: function() {
         this._saveToNative();
         this._delegate &&
@@ -4569,7 +4850,19 @@ Package('tupai.model.caches')
     },
     _saveToNative: function() {
         if(this._nativeStorage) {
-            this._nativeStorage[this._nativeStorageKey] = JSON.stringify(this._storage.getStorage());
+            var meta = this._meta;
+            if(!meta) {
+                meta = this._meta = {};
+                for(var name in this._nativeStorageDefaultMeta) {
+                    meta[name] = this._nativeStorageDefaultMeta[name];
+                }
+            }
+            meta.created = (Date.now?Date.now():(+new Date()));
+            var d = {
+                m: meta,
+                d: this._storage.getStorage()
+            };
+            this._nativeStorage.setItem(this._nativeStorageKey, JSON.stringify(d));
         }
     },
 
@@ -4601,6 +4894,22 @@ Package('tupai.model.caches')
      */
     getAttribute: function(name) {
         return this._attributes && this._attributes[name];
+    },
+
+    /**
+     * set custom attribute by name.
+     * @param {String} name attribute name
+     * @param {Object} value attribute value
+     * @return {Object} old attribute value
+     *
+     */
+    setAttribute: function(name, value) {
+        if(!this._attributes) {
+            this._attributes = {};
+        }
+        var old = this._attributes[name];
+        this._attributes[name] = value;
+        return old;
     },
 
     /**
@@ -5224,15 +5533,16 @@ Package('tupai')
      */
     showRoot: function(url, options) {
 
+        var transitOptions = {entry: true};
         if(this._transitManager) {
-            return this.transit(url, options, {entry: true});
+            return this.transit(url, options, transitOptions);
         } else if(!this._rootViewControllerClasszz) {
             throw new Error('missing root view controller.');
         }
 
         var controller = new this._rootViewControllerClasszz(this);
-        controller.viewInit(options, '/root', 'root');
-        this.transitController(controller, '/root', options,{});
+        controller.viewInit(options, '/root', transitOptions);
+        this.transitController(controller, '/root', options, transitOptions);
     },
 
     transitController: function (controller, url, options, transitOptions) {
@@ -5961,8 +6271,8 @@ Package('tupai')
  * -  viewDidHide(view);
  *
  * ### The delegate commands from TransitManager
- * -  viewInit(options, url, name);
- * -  transitController(controller, url, options);
+ * -  viewInit(options, url, transitOptions);
+ * -  transitController(controller, url, options, transitOptions);
  *
  * ### The delegate commands from TableView
  * -  numberOfRows(tableView);
@@ -6144,6 +6454,20 @@ Package('tupai')
     },
 
     /**
+     * get Cache by name
+     */
+    getCacheManager: function() {
+        return this._app.getCacheManager();
+    },
+
+    /**
+     * get Cache by name
+     */
+    getApiManager: function(name) {
+        return this._app.getApiManager(name);
+    },
+
+    /**
      * get the content view object
      */
 	getContentView: function() {
@@ -6202,8 +6526,8 @@ Package('tupai')
      * you should ovveride this function and create a content view by setContentView
      * @param {Object} options
      * @param {String} url
-     * @param {String} name
+     * @param {Object} transit options
      */
-	viewInit: function(options, url, name) {
+	viewInit: function(options, url, transitOptions) {
 	}
 });});

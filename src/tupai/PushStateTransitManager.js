@@ -28,29 +28,44 @@ Package('tupai')
         cp.TransitManager.prototype.initialize.apply(this, arguments);
 
         this._separator = (config && config.separator) || "#!";
-        var initialURL = location.href;
         var THIS = this;
         this._popEventHanlder=undefined;
-        window.addEventListener("popstate", function(jsevent) {
-            //console.log(jsevent);
-            var state = jsevent.state;
-            if(!state) return;
-            var url = state.url;
-            if(!url) return;
 
-            var hanlder = THIS._popEventHanlder;
-            if(hanlder) {
-                delete THIS._popEventHanlder;
-                hanlder();
-                return;
-            }
+        this._addPopStateEventListener = function() {
+            window.addEventListener("popstate", function(jsevent) {
+                //console.log(jsevent);
+                var state = jsevent.state;
+                if(!state || !state.url) {
+                    // no state
+                    var url = window.location.href;
+                    var entry = THIS._parseFromLocation();
+                    if(THIS._current) {
+                        var result = cp.TransitManager.prototype.transitWithHistory.apply(THIS, [entry.url, entry.options]);
+                        if(result) {
+                            THIS._replaceState();
+                        }
+                    }
 
-            THIS._history = state.history || [];
-            THIS._transit(
-                url,
-                state.options,
-                state.transitOptions);
-        });
+                    return;
+                }
+
+                var url = state.url;
+                var hanlder = THIS._popEventHanlder;
+                if(hanlder) {
+                    delete THIS._popEventHanlder;
+                    hanlder();
+                    return;
+                }
+
+                THIS._history = state.history || [];
+                THIS._transit(
+                    url,
+                    state.options,
+                    state.transitOptions);
+            });
+
+            THIS._addPopStateEventListener = function(){};
+        };
     },
     back: function (targetUrl, options, transitOptions) {
 
@@ -157,6 +172,9 @@ Package('tupai')
         var result = cp.TransitManager.prototype.transit.apply(this, [url, options, transitOptions]);
         if(result) {
             this._replaceState();
+        }
+        if(transitOptions && transitOptions.entry) {
+            this._addPopStateEventListener();
         }
         return result;
     }

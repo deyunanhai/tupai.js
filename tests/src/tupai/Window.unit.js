@@ -2,7 +2,7 @@ Package('test.window')
 .use('tupai.ViewController')
 .use('tupai.ui.View')
 .define('RootViewController', function(cp) { return cp.ViewController.extend({
-    viewInit: function(options, url, name) {
+    viewInit: function(options, url) {
         deepEqual(options, {test:true}, 'validation window initialize options');
         ok(url === '/root' || url === '/root1', 'validation window initialize url');
         this.setContentView(new cp.View());

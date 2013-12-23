@@ -15,10 +15,9 @@ Package('helloworld')
     },
     viewDidLoad: function (view) {
         cp.ViewController.prototype.viewDidLoad.apply(this, arguments);
-        var This = this;
-        view.findViewById('btnGotoSub').bind('click', function() {
-            This._window.transitWithHistory('/sub');
-        });
+    },
+    didClicked: function() {
+        this._window.transitWithHistory('/sub');
     },
     viewDidUnload: function (view) {
         cp.ViewController.prototype.viewDidUnload.apply(this, arguments);

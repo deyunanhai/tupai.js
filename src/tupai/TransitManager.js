@@ -345,7 +345,7 @@ Package('tupai')
 
         var initController = function(controller) {
             if(controller) {
-                (controller.viewInit && controller.viewInit(options, url, r));
+                (controller.viewInit && controller.viewInit(options, url, transitOptions));
             }
             if(!pController.transitController)
                 throw new Error('container controller must have transitController delegate function. ' + url);
