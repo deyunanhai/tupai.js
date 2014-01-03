@@ -497,6 +497,23 @@ Package('tupai.events')
     },
 
     /**
+     * get events size
+     * @param {String} type eventType
+     * @return size
+     *
+     */
+    size: function(type) {
+        var chain = this._events[type];
+        if(!chain) return 0;
+        var cnt = 0;
+        for(var i=0,n=chain.length;i<n;i++) {
+            if(!chain[i]) continue;
+            cnt++;
+        }
+        return cnt;
+    },
+
+    /**
      * clear all listeners
      *
      */
@@ -5549,7 +5566,7 @@ Package('tupai')
         //console.log('transit by window ' + url);
         if(!controller) {
             // show 404
-            throw new Error('can\t found controller.('+url+')');
+            throw new Error('can\'t found controller.('+url+')');
         } else {
             var view = controller.getContentView();
             if(!view) throw new Error('cannot get contentView from ViewController');
@@ -6313,6 +6330,41 @@ Package('tupai')
      */
     getApplication: function() {
         return this._app;
+    },
+
+    /**
+     * {@link tupai.Window#back}
+     */
+    back: function (targetUrl, options, transitOptions) {
+        return this._window.back.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#backTo}
+     */
+    backTo: function(index) {
+        return this._window.backTo.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#transitWithHistory}
+     */
+    transitWithHistory: function (url, options, transitOptions) {
+        return this._window.transitWithHistory.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#getTransitHistories}
+     */
+    getTransitHistories: function () {
+        return this._window.getTransitHistories.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#transit}
+     */
+    transit: function (url, options, transitOptions) {
+        return this._window.transit.apply(this._window, arguments);
     },
 
     /**
