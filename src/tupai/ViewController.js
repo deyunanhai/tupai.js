@@ -59,6 +59,41 @@ Package('tupai')
     },
 
     /**
+     * {@link tupai.Window#back}
+     */
+    back: function (targetUrl, options, transitOptions) {
+        return this._window.back.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#backTo}
+     */
+    backTo: function(index) {
+        return this._window.backTo.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#transitWithHistory}
+     */
+    transitWithHistory: function (url, options, transitOptions) {
+        return this._window.transitWithHistory.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#getTransitHistories}
+     */
+    getTransitHistories: function () {
+        return this._window.getTransitHistories.apply(this._window, arguments);
+    },
+
+    /**
+     * {@link tupai.Window#transit}
+     */
+    transit: function (url, options, transitOptions) {
+        return this._window.transit.apply(this._window, arguments);
+    },
+
+    /**
      * register an observer
      * @param {String} name cache name to observer
      * @param {Object} observer observer instance

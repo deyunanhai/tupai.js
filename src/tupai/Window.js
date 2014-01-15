@@ -172,7 +172,7 @@ Package('tupai')
         //console.log('transit by window ' + url);
         if(!controller) {
             // show 404
-            throw new Error('can\t found controller.('+url+')');
+            throw new Error('can\'t found controller.('+url+')');
         } else {
             var view = controller.getContentView();
             if(!view) throw new Error('cannot get contentView from ViewController');
