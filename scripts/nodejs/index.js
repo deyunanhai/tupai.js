@@ -48,19 +48,24 @@ var execute = function(cmd, args, options) {
         console.error(err);
     });
 
-    //exit
-    cp.on('close', function(code) {
-        if(needStdin) {
-            process.stdin.end();
-        }
-        options && options.end && options.end(code);
-    });
-
-    process.on('SIGTERM', function() {
+    var closeFunc = function() {
         if(cp) cp.kill('SIGTERM');
         options && options.end && options.end();
         process.exit(1);
+    };
+    process.on('SIGTERM', closeFunc);
+
+    //exit
+    cp.on('close', function(code) {
+        process.removeListener('SIGTERM', closeFunc);
+        if(needStdin) {
+            process.stdin.end();
+        }
+        options && options.end && process.nextTick(function() {
+            options.end(code);
+        });
     });
+
 };
 
 var _rmdirSync = function(dir) {
