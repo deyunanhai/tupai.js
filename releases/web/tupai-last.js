@@ -3293,13 +3293,22 @@ Package('tupai.model.caches')
 
     /**
      * iterate cache item
-     * @param {Function} callback
+     * @param {function} callback
      *
      */
-    iterator: function(callback) {
+    forEach: function(callback) {
         for(var name in this._storage) {
             callback(this._storage[name], name);
         }
+    },
+
+    /**
+     * iterate cache item
+     * @param {function} callback
+     *
+     */
+    iterator: function(callback) {
+        this.forEach.apply(this, arguments);
     },
 
     /**
@@ -5001,6 +5010,15 @@ Package('tupai.model.caches')
         if(!noNotify && this.size() != oldSize) {
             this._delegate.didCacheChanged(this._name, this);
         }
+    },
+
+    /**
+     * iterate cache item
+     * @param {Function} callback
+     *
+     */
+    forEach: function(callback) {
+        this._storage.iterator(callback);
     },
 
     /**

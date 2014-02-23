@@ -245,13 +245,22 @@ Package('tupai.model.caches')
 
     /**
      * iterate cache item
-     * @param {Function} callback
+     * @param {function} callback
      *
      */
-    iterator: function(callback) {
+    forEach: function(callback) {
         for(var name in this._storage) {
             callback(this._storage[name], name);
         }
+    },
+
+    /**
+     * iterate cache item
+     * @param {function} callback
+     *
+     */
+    iterator: function(callback) {
+        this.forEach.apply(this, arguments);
     },
 
     /**
