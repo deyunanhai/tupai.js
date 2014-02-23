@@ -273,6 +273,7 @@ Package('tupai.ui')
     _createViewIDMap: function() {
         if(this._viewIDMap) return;
 
+        var This = this;
         var createView = function(elm) {
             var viewClsNm = cp.CommonUtil.getDataSet(elements[i], 'chView');
             var view;
@@ -283,7 +284,7 @@ Package('tupai.ui')
                 view = new cp.View();
             }
             view._element = elm;
-            view._parent = this;
+            view._parent = This;
             view._parentAdded = true;
             return view;
         };
