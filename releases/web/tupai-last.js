@@ -1440,12 +1440,20 @@ Package('tupai.util')
         };
     }
 
+    var format = function(str, options, regexp) {
+        regexp = regexp || /\{(.+?)\}/g;
+        return str.replace(regexp, function(name, key) {
+            return options[key] || '';
+        });
+    };
+
     return {
         bind: bind,
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
         trim: trim,
+        format: format,
         getDataSets: getDataSets,
         getDataSet: getDataSet
     };
@@ -1536,7 +1544,7 @@ Package('tupai.ui')
             }
             var root = document.createElement(rootTag);
             root.innerHTML = template;
-            var elem = root.children[0];
+            var elem = root.children[0] || root;
             bindToElement(elem, data);
             return elem;
         } else {

@@ -55,7 +55,7 @@ function genTemplate(filePath, packageName, callback) {
 }
 
 function listClass(callback) {
-    var classPath = mConfig.genTemplates + ';' + mConfig.sources;
+    var classPath = mConfig.genConfigs + ';' + mConfig.genTemplates + ';' + mConfig.sources;
     execute(['list', '--classPath', classPath, '--ignoreNotFound'], function(output) {
         var classList;
         try {
@@ -236,7 +236,8 @@ function startHttpServer(releaseMode, printLog) {
 var classListHtml;
 function renderClassListHtml(callback) {
     listClass(function(cl) {
-        classListHtml = '<script src="__js/Config.js"></script>';
+        //classListHtml = '<script src="__js/Config.js"></script>';
+        classListHtml = '';
         cl.forEach(function(classzz) {
             classListHtml += '\n<script src="__js/' + classzz.name.split('.').join('/') + '.js"></script>';
         });

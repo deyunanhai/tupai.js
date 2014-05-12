@@ -106,7 +106,6 @@ program
 program
 .command('new <name>')
 .option('-p, --package <packageName>', 'package name')
-.option('--usePackage2', 'use package2 instead of package.')
 .action(function(name, options) {
     tupai.createProject(name, options);
 });

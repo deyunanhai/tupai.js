@@ -101,12 +101,20 @@ Package('tupai.util')
         };
     }
 
+    var format = function(str, options, regexp) {
+        regexp = regexp || /\{(.+?)\}/g;
+        return str.replace(regexp, function(name, key) {
+            return options[key] || '';
+        });
+    };
+
     return {
         bind: bind,
         isValidUrl: isValidUrl,
         isValidHttpUrl: isValidHttpUrl,
         haveClassList: haveClassList,
         trim: trim,
+        format: format,
         getDataSets: getDataSets,
         getDataSet: getDataSet
     };

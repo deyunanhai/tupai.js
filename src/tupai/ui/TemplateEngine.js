@@ -84,7 +84,7 @@ Package('tupai.ui')
             }
             var root = document.createElement(rootTag);
             root.innerHTML = template;
-            var elem = root.children[0];
+            var elem = root.children[0] || root;
             bindToElement(elem, data);
             return elem;
         } else {

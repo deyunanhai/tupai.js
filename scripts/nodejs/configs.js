@@ -25,11 +25,20 @@ function compileConfigSync(input, output, fullClassName, options) {
     }
 
     var configObject={};
+    var subObjects=[]
     files.forEach(function(filename) {
-        if(filename.match(/.*\.json$/)) {
-            var name = filename.substring(0, filename.length-5);
-            var s = fs.readFileSync(path.join(input, filename));
-            configObject[name] = JSON.parse(s.toString());
+        var p = path.join(input, filename);
+        var stat = fs.statSync(p);
+        if(stat.isDirectory()) {
+            subObjects.push({path: p, name: filename});
+        } else if(stat.isFile()) {
+            if(filename.match(/.*\.json$/)) {
+                var name = filename.substring(0, filename.length-5);
+                var s = fs.readFileSync(path.join(input, filename));
+                configObject[name] = JSON.parse(s.toString());
+            } else {
+                console.warn('        skip ' + p);
+            }
         }
     });
 
@@ -41,6 +50,15 @@ function compileConfigSync(input, output, fullClassName, options) {
     fs.writeFileSync(outputFile, require('util').format(tempStr, packageName, className));
     fs.appendFileSync(outputFile, JSON.stringify(configObject, null, 4));
     fs.appendFileSync(outputFile, ';});');
+
+    // create sub config obejcts
+    if(subObjects.length > 0) {
+        subObjects.forEach(function(sub) {
+            var cName = sub.name[0].toUpperCase() + sub.name.substring(1);
+            var subPackageName = packageName + (packageName?'.':'') + sub.name + '.' + cName;
+            compileConfigSync(sub.path, output, subPackageName, options);
+        });
+    }
 }
 
 exports.compileConfigSync = function(input, output, fullClassName, options) {
