@@ -5,6 +5,13 @@
 
 var path = require('path')
 
-exports.path = path.join(__dirname, 'bin' ,'tupaijs')
-
-exports.version = '0.1'
+var _version;
+module.exports = {
+    path: path.join(__dirname, 'bin' ,'tupaijs'),
+    get version() {
+        if(!_version) {
+            _version = require(path.join(__dirname, 'package.json')).version;
+        }
+        return _version;
+    }
+};
