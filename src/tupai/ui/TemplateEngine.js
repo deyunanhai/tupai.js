@@ -63,7 +63,7 @@ Package('tupai.ui')
         if(!tarElement) throw new Error('bindToElement failed. because element is undefined');
         loopChName(tarElement, function(name, child) {
             var value = cp.HashUtil.getValueByName(name, data);
-            setValue(child, value);
+            cp.This.setValue(child, value);
         });
     };
 
@@ -95,7 +95,7 @@ Package('tupai.ui')
     var getBindedValue = function(tarElement, data) {
         data = data || {};
         loopChName(tarElement, function(name, child) {
-            var value = getValue(child);
+            var value = cp.This.getValue(child);
             data[name] = value;
         });
         return data;
@@ -121,7 +121,7 @@ Package('tupai.ui')
                     });
                 }
                 elm.innerHTML=html;
-                return setValue(elm, config.value);
+                return cp.This.setValue(elm, config.value);
             } else {
                 values = [value];
             }
