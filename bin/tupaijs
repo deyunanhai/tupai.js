@@ -31,6 +31,7 @@ program
 .command('server')
 .option('-t, --target <target>', 'target [debug|release] default is debug')
 .option('-p, --printLog', 'print log to stdout. default is off')
+.option('-s, --serverConfig <serverConfig>', 'serverConfig file path. will replace the server section in tupai.conf.json')
 //.description('start test server to run application')
 .action(function(options) {
     tupai.startServer(options);

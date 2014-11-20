@@ -211,10 +211,10 @@ function configDebugMode(app) {
     app.use('/templates', express.directory(mConfig.templates));
 }
 
-function startHttpServer(releaseMode, printLog) {
+function startHttpServer(releaseMode, options) {
     var app = express();
     app.use(express.favicon(path.join(__dirname, '..', '..', 'favicon.ico')));
-    if(printLog) {
+    if(options.printLog) {
         app.use(express.logger());
     }
 
@@ -325,10 +325,24 @@ exports.start = function(options) {
         return;
     }
     mConfig = tupai.getConfig();
+    if(options.serverConfig) {
+        var filename = options.serverConfig;
+        if(!fs.existsSync(filename)) {
+            console.error(filename + ' not exists.');
+        } else {
+            try {
+                var configData = fs.readFileSync(filename);
+                var data = JSON.parse(configData.toString());
+                mConfig.data = data;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+    }
     var target = (options && options.target) || 'debug';
     var releaseMode = ('release' === target);
     if(releaseMode) {
-        startHttpServer(releaseMode, options.printLog);
+        startHttpServer(releaseMode, options);
     } else {
         tupai.rmdirSync('gen');
         fs.mkdirSync('gen');
@@ -336,7 +350,7 @@ exports.start = function(options) {
         genTemplates(function() {
             renderClassListHtml(function() {
                 watchFs();
-                startHttpServer(releaseMode, options.printLog);
+                startHttpServer(releaseMode, options);
             });
         });
     }

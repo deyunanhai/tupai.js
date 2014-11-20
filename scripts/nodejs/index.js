@@ -125,7 +125,7 @@ var copy = function(dist, src) {
     }
     return dist;
 }
-var tupaiConfFileName = 'tupai.conf.json'
+var tupaiConfFileName = 'tupai.conf.json';
 var readConfig = function() {
     if(!fs.existsSync(tupaiConfFileName)) {
         return mDefaultConfig;
