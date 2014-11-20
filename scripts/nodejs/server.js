@@ -333,7 +333,7 @@ exports.start = function(options) {
             try {
                 var configData = fs.readFileSync(filename);
                 var data = JSON.parse(configData.toString());
-                mConfig.data = data;
+                mConfig.server = data;
             } catch(e) {
                 console.error(e);
             }
