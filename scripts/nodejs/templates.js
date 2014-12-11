@@ -45,7 +45,7 @@ function compileTemplate(url, output, packageName, options) {
                 console.log('an error occured:', err);
                 return;
             }
-            fs.write(info.fd, html);
+            fs.writeSync(info.fd, html);
             fs.close(info.fd, function(err) {
                 if(err) {
                     console.log('an error occured:', err);
