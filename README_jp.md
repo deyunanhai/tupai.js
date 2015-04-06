@@ -105,7 +105,9 @@ License
 Links
 =========
 [Web Site](http://tupaijs.com/)
+
 [Examples](http://tupaijs.com/examples.html)
+
 [API Documentation](http://tupaijs.com/docs/)
 
 Author
