@@ -24,6 +24,7 @@ Generate project Use tupaijs command.
     tupaijs new helloworld
 
 Start server.
+
     cd helloworld; tupaijs server
 
 Open in browser.
