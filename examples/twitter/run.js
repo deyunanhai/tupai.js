@@ -27,8 +27,11 @@ function startHttpServer(port, next) {
 
     app.use(function(req, res, next) {
         //console.log(req.query);
-        twit.get('/search/tweets.json', req.query, function(data) {
-            res.send(data);
+        twit.get('search/tweets.json', req.query, function(error, tweets){
+          if (!error) {
+            //console.log(tweets);
+            res.send(tweets);
+          }
         });
     });
 

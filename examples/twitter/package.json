@@ -1,12 +1,12 @@
 {
-  "name": "twitter",
+  "name": "twitterapp",
   "version": "0.0.1",
   "description": "",
   "author": "",
   "readmeFilename": "README.md",
   "dependencies": {
       "express": "3.3.1",
-      "twitter": "0.2.1"
+      "twitter": "1.2.5"
   },
   "devDependencies": {
   }
