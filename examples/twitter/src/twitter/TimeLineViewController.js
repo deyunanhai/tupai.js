@@ -24,7 +24,7 @@ Package('twitter')
         this.executeApi({
             name: 'timeline',
             requestName: 'search',
-            parameters: {q: 'NHK'}
+            parameters: {q: 'ネコ'}
         });
     },
     _fetchPrev: function() {
