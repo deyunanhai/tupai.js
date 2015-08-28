@@ -54,6 +54,26 @@ function genTemplate(filePath, packageName, callback) {
     });
 }
 
+function listTupaiClass(callback) {
+    var packagejsHtml = '<script src="__tupairoot/libs/package.js"></script>';
+    var tupaiSrcDir = path.join(__dirname, '..', '..', 'src', 'tupai');
+    execute(['list', '--classPath', tupaiSrcDir, '--ignoreNotFound'], function(output) {
+        //if (!output) {return;}
+        var classes = JSON.parse(output);
+        //console.log(classes);
+        var tupaijsfiles = classes.map(function(cls){
+            var path = cls.path;
+            return path.replace(tupaiSrcDir + "/", "");
+        });
+
+        var scripts = tupaijsfiles.map(function(filename){ return '<script src="__tupairoot/src/tupai/' + filename + '"></script>';});
+        tupaiFilesHtml = packagejsHtml + "\n" + scripts.join("\n");
+
+        callback();
+    });
+
+}
+
 function listClass(callback) {
     var classPath = mConfig.genConfigs + ';' + mConfig.genTemplates + ';' + mConfig.sources;
     execute(['list', '--classPath', classPath, '--ignoreNotFound'], function(output) {
@@ -191,7 +211,9 @@ function configDebugMode(app) {
                 next();
             } else {
                 var content = fs.readFileSync(filePath).toString();
-                res.send(content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml));
+                content = content.replace(/<!--[ ]*__js_files__[ ]*-->[\s\S]*<!--[ ]*__js_files__[ ]*-->/, classListHtml);
+                content = content.replace(/<!-- *__tupai_files__ *-->[\s\S]*<!-- *__tupai_files__ *-->/, tupaiFilesHtml);
+                res.send(content);
             }
         } else if(p == '/js/tupai.min.js') {
             /*if(fs.existsSync(path.join(mConfig.web,'js','tupai.min.js'))) {
@@ -205,6 +227,10 @@ function configDebugMode(app) {
             next();
         }
     });
+
+    var tupaiRootDir = path.join(__dirname, '..', '..');
+    app.use('/__tupairoot', express.static(tupaiRootDir));
+
     app.use('/tupai', express.static(webDir));
     app.use('/tupai', express.directory(webDir));
     app.use('/templates', express.static(mConfig.templates));
@@ -234,6 +260,8 @@ function startHttpServer(releaseMode, options) {
 
 
 var classListHtml;
+var tupaiFilesHtml;
+
 function renderClassListHtml(callback) {
     listClass(function(cl) {
         //classListHtml = '<script src="__js/Config.js"></script>';
@@ -348,9 +376,11 @@ exports.start = function(options) {
         fs.mkdirSync('gen');
         genConfigs();
         genTemplates(function() {
-            renderClassListHtml(function() {
-                watchFs();
-                startHttpServer(releaseMode, options);
+            listTupaiClass(function(){
+                renderClassListHtml(function() {
+                    watchFs();
+                    startHttpServer(releaseMode, options);
+                });
             });
         });
     }
