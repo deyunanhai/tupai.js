@@ -3,6 +3,7 @@
  * @version 1.0
  * */
 (function (global) {
+    global.ns = {};
 
     function copy(targetElement, providers, override) {
 
@@ -180,11 +181,23 @@
         // define(className, callback);
         // define(callback);
         define: function(arg1, arg2) {
+            if(typeof arg1 === 'string') {
+                var className = arg1;
+                var names = this._packageName.split(".");
+            }
+
             this._runQueue.push(function(This) {
                 if(typeof arg1 === 'string') {
                     var className = arg1;
                     var callback = arg2;
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
+
+                    var ns = global.ns;
+                    if (! (This._packageName in ns)) {
+                        ns[This._packageName] = {}
+                    }
+                    ns[This._packageName][className] = obj;
+                    obj._className = arg1;
                     This._packageObj[className] = obj;
                     This._classProvider[className] = obj;
                     This._classProvider.This = obj;
