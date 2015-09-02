@@ -61,12 +61,12 @@ function listTupaiClass(callback) {
         //if (!output) {return;}
         var classes = JSON.parse(output);
         //console.log(classes);
-        var tupaijsfiles = classes.map(function(cls){
+        var scripts = classes.map(function(cls){
             var path = cls.path;
-            return path.replace(tupaiSrcDir + "/", "");
+            var filename = path.replace(tupaiSrcDir + "/", "");
+            return '<script src="__tupairoot/src/tupai/' + filename + '"></script>';
         });
 
-        var scripts = tupaijsfiles.map(function(filename){ return '<script src="__tupairoot/src/tupai/' + filename + '"></script>';});
         tupaiFilesHtml = packagejsHtml + "\n" + scripts.join("\n");
 
         callback();
