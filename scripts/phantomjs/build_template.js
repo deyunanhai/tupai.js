@@ -64,8 +64,9 @@ function writeToFile() {
     stream.write('Package(\'' + packageName + '\')\n');
     stream.write('.define(\'' + className + '\', function(cp) {\n');
 
-    stream.write('var _templates = ');
-    stream.write(JSON.stringify(templates));
+    stream.write('  var _templates = ');
+    var jsonString = JSON.stringify(templates, undefined, 4);
+    stream.write(jsonString);
     stream.write(';\n');
 
     //footer
