@@ -28,6 +28,9 @@ function compileTemplate(url, output, packageName, options) {
             onStdoutData: options.onStdoutData,
             onStderrData: options.onStderrData,
             end: function(code) {
+                if (code !== 0) {
+                    throw new Error('executing phantomjs failed.');
+                }
                 end && end(code, url);
             }
         });
