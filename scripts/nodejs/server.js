@@ -92,12 +92,6 @@ function listClass(callback) {
 }
 
 var URL = require('url');
-function createProxyHttpHandler(config) {
-    return (function(req, res, next) {
-        req.url = config.basePathName + req.url;
-        config.proxy.proxyRequest(req, res)
-    });
-}
 
 function useProxyRequest(app) {
 
@@ -108,21 +102,16 @@ function useProxyRequest(app) {
     var proxies = serverConfig.proxies;
     console.log('proxies: ');
     for(var name in proxies) {
-        var u = URL.parse(proxies[name]);
-        var config = {
-            proxy: new httpProxy.HttpProxy({
-                target: {
-                    host: u.hostname,
-                    port: u.port,
-                    https: u.protocol === 'https:'
-                }
-            }),
-            basePathName: (u.pathname.length > 1 ? u.pathname : '')
-        };
+        var url = proxies[name];
+        var u = URL.parse(url);
+        var proxy = httpProxy.createProxyServer({secure:false});
+        console.log('    ' + name + ' -> ' + url);
+        app.use(name, function(req, res) {
+            proxy.web(req, res, {
+                target: url,
+            });
+        });
 
-        console.log('    ' + name + ' -> ' + u.protocol + '//' +
-                    u.hostname + ':' + (u.port?u.port:80) + u.pathname);
-        app.use(name, createProxyHttpHandler(config));
     }
 }
 
