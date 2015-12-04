@@ -68,4 +68,14 @@ test('extend',function() {
 	});
 });
 
+test('className', function() {
+	expect(2);
 
+	Package('X').define('Parent', function(cc) { return Package.Class.extend({}); });
+	Package('X').define('Child', function(cc) { return Package.classProvider.X.Parent.extend({}); });
+    var parent = new Package.classProvider.X.Parent();
+    var child = new Package.classProvider.X.Child();
+
+    ok(parent.__className__, 'X.Parent');
+    ok(child.__className__, 'X.Child');
+});

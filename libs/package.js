@@ -186,9 +186,7 @@
                     var callback = arg2;
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
                     if (obj.prototype) {
-                        obj.prototype.getClass = function() {
-                            return This;
-                        };
+                        obj.prototype.__className__ = This._packageName + '.' + className;
                     }
                     This._packageObj[className] = obj;
                     This._classProvider[className] = obj;
