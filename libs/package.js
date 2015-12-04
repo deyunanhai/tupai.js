@@ -186,7 +186,13 @@
                     var callback = arg2;
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
                     if (obj.prototype) {
-                        obj.prototype.__className__ = This._packageName + '.' + className;
+                        if (!obj.__super__) {
+                            obj.__super__ = Object;
+                        }
+                        obj.prototype.__class__ = obj;
+                        obj.toString = function() {
+                            return This._packageName + '.' + className;
+                        };
                     }
                     This._packageObj[className] = obj;
                     This._classProvider[className] = obj;
@@ -226,12 +232,15 @@
         return classObj;
     };
     BaseClass.extend = function(prototype, properties) {
-
         var parent = this;
         var extendedClass = createClass(prototype, properties);
 
         //extendedClass.prototype.__proto__ = parent.prototype;
         copy(extendedClass.prototype, parent.prototype, false);
+
+        if (this.prototype.__class__) {
+            extendedClass.__super__ = this.prototype.__class__;
+        }
 
         //extendedClass.prototype.SUPER = this.prototype;
         //extendedClass.SUPER = this;

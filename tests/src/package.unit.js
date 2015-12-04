@@ -68,14 +68,46 @@ test('extend',function() {
 	});
 });
 
-test('className', function() {
-    expect(2);
+test('__class__', function() {
+    expect(11);
 
-    Package('X').define('Parent', function(cc) { return Package.Class.extend({}); });
-    Package('X').define('Child', function(cc) { return Package.classProvider.X.Parent.extend({}); });
-    var parent = new Package.classProvider.X.Parent();
+    Package('X').define('Root', function(cc) { return Package.Class.extend({
+        cry: 'Gyao',
+        Gyao: function() {
+            return 'Root ' + this.cry;
+        }
+    }); });
+
+    Package('X').define('Child', function(cc) { return Package.classProvider.X.Root.extend({
+        cry: 'Nyan',
+        Gyao: function() {
+            return 'Child ' + this.cry;
+        }
+    }); });
+
+    Package('X').define('ChildChild', function(cc) { return Package.classProvider.X.Child.extend({
+        cry: 'Wan',
+        rootGyao: function() {
+            return this.__class__.__super__.__super__.prototype.Gyao.apply(this, []);
+        }
+    }); });
+
+    var root = new Package.classProvider.X.Root();
     var child = new Package.classProvider.X.Child();
+    var childchild = new Package.classProvider.X.ChildChild();
 
-    ok(parent.__className__, 'X.Parent');
-    ok(child.__className__, 'X.Child');
+    ok(root.__class__.toString() === 'X.Root', 'X.Root');
+    ok(child.__class__.toString() === 'X.Child', 'X.Child');
+    ok(child.__class__.__super__.toString() === 'X.Root', 'X.Root');
+    ok(childchild.__class__.toString() === 'X.ChildChild', 'X.ChildChild');
+    ok(childchild.__class__.__super__.toString() === 'X.Child', 'X.Child');
+    ok(childchild.__class__.__super__.__super__.toString() === 'X.Root', 'X.Root');
+    ok(childchild.__class__.__super__.__super__.__super__ === Object, 'Object');
+
+    ok(root.Gyao() === 'Root Gyao', 'Root Gyao');
+    ok(child.Gyao() === 'Child Nyan', 'Child Nyan');
+    ok(childchild.Gyao() === 'Child Wan', 'Child Wan');
+    ok(childchild.rootGyao() === 'Root Wan', 'Root Wan');
+    
 });
+
