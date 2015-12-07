@@ -69,12 +69,18 @@ test('extend',function() {
 });
 
 test('__class', function() {
-    expect(11);
+    expect(17);
 
     Package('X').define('Root', function(cc) { return Package.Class.extend({
         cry: 'Gyao',
         Gyao: function() {
             return 'Root ' + this.cry;
+        },
+        selfClass: function() {
+            return this.__class === Package.classProvider.X.Root;
+        },
+        parentClass: function() {
+            return this.__class.__super === Package.Class;
         },
     }); });
 
@@ -82,14 +88,26 @@ test('__class', function() {
         cry: 'Nyan',
         Gyao: function() {
             return 'Child ' + this.cry;
-        }
+        },
+        selfClass: function() {
+            return this.__class === Package.classProvider.X.Child;
+        },
+        parentClass: function() {
+            return this.__class.__super === Package.classProvider.X.Root;
+        },
     }); });
 
     Package('X').define('ChildChild', function(cc) { return Package.classProvider.X.Child.extend({
         cry: 'Wan',
         rootGyao: function() {
             return this.__class.__super.__super.prototype.Gyao.apply(this, []);
-        }
+        },
+        selfClass: function() {
+            return this.__class === Package.classProvider.X.ChildChild;
+        },
+        parentClass: function() {
+            return this.__class.__super === Package.classProvider.X.Child;
+        },
     }); });
 
     var root = new Package.classProvider.X.Root();
@@ -108,6 +126,13 @@ test('__class', function() {
     ok(child.Gyao() === 'Child Nyan', 'Child Nyan');
     ok(childchild.Gyao() === 'Child Wan', 'Child Wan');
     ok(childchild.rootGyao() === 'Root Wan', 'Root Wan');
-    
+
+    ok(root.selfClass() === true, 'Root selfClass');
+    ok(child.selfClass() === true, 'Child selfClass');
+    ok(childchild.selfClass() === true, 'Child selfClass');
+
+    ok(root.parentClass() === true, 'Root parentClass');
+    ok(child.parentClass() === true, 'Child parentClass');
+    ok(childchild.parentClass() === true, 'Child parentClass');
 });
 
