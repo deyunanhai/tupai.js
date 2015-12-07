@@ -68,14 +68,14 @@ test('extend',function() {
 	});
 });
 
-test('__class__', function() {
+test('__class', function() {
     expect(11);
 
     Package('X').define('Root', function(cc) { return Package.Class.extend({
         cry: 'Gyao',
         Gyao: function() {
             return 'Root ' + this.cry;
-        }
+        },
     }); });
 
     Package('X').define('Child', function(cc) { return Package.classProvider.X.Root.extend({
@@ -88,7 +88,7 @@ test('__class__', function() {
     Package('X').define('ChildChild', function(cc) { return Package.classProvider.X.Child.extend({
         cry: 'Wan',
         rootGyao: function() {
-            return this.__class__.__super__.__super__.prototype.Gyao.apply(this, []);
+            return this.__class.__super.__super.prototype.Gyao.apply(this, []);
         }
     }); });
 
@@ -96,13 +96,13 @@ test('__class__', function() {
     var child = new Package.classProvider.X.Child();
     var childchild = new Package.classProvider.X.ChildChild();
 
-    ok(root.__class__.toString() === 'X.Root', 'X.Root');
-    ok(child.__class__.toString() === 'X.Child', 'X.Child');
-    ok(child.__class__.__super__.toString() === 'X.Root', 'X.Root');
-    ok(childchild.__class__.toString() === 'X.ChildChild', 'X.ChildChild');
-    ok(childchild.__class__.__super__.toString() === 'X.Child', 'X.Child');
-    ok(childchild.__class__.__super__.__super__.toString() === 'X.Root', 'X.Root');
-    ok(childchild.__class__.__super__.__super__.__super__ === Object, 'Object');
+    ok(root.__class.toString() === 'X.Root', 'X.Root');
+    ok(child.__class.toString() === 'X.Child', 'X.Child');
+    ok(child.__class.__super.toString() === 'X.Root', 'X.Root');
+    ok(childchild.__class.toString() === 'X.ChildChild', 'X.ChildChild');
+    ok(childchild.__class.__super.toString() === 'X.Child', 'X.Child');
+    ok(childchild.__class.__super.__super.toString() === 'X.Root', 'X.Root');
+    ok(childchild.__class.__super.__super.__super === Package.Class, 'Package.Class');
 
     ok(root.Gyao() === 'Root Gyao', 'Root Gyao');
     ok(child.Gyao() === 'Child Nyan', 'Child Nyan');

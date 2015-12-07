@@ -72,7 +72,7 @@
         var cp = packageObj._classProvider;
         if(cp[className]) return;
 
-        var classObj = findClass(nameArr)
+        var classObj = findClass(nameArr);
         if(!classObj) {
 
             // add to waitQueue
@@ -186,12 +186,13 @@
                     var callback = arg2;
                     var obj = ((typeof callback !== 'function') ? callback : callback(This._classProvider));
                     if (obj.prototype) {
-                        if (!obj.__super__) {
-                            obj.__super__ = Object;
+                        if (!obj.__super) {
+                            obj.__super = global.Package.Class;
                         }
-                        obj.prototype.__class__ = obj;
+                        obj.prototype.__class = obj;
+                        obj.prototype.__className = This._packageName + '.' + className;
                         obj.toString = function() {
-                            return This._packageName + '.' + className;
+                            return this.prototype.__className;
                         };
                     }
                     This._packageObj[className] = obj;
@@ -238,8 +239,8 @@
         //extendedClass.prototype.__proto__ = parent.prototype;
         copy(extendedClass.prototype, parent.prototype, false);
 
-        if (this.prototype.__class__) {
-            extendedClass.__super__ = this.prototype.__class__;
+        if (this.prototype.__class) {
+            extendedClass.__super = this.prototype.__class;
         }
 
         //extendedClass.prototype.SUPER = this.prototype;
