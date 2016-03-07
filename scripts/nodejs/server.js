@@ -112,6 +112,9 @@ function useProxyRequest(app) {
             });
         });
 
+        proxy.on('error', function(err, req, res) {
+            res.end();
+        });
     }
 }
 
