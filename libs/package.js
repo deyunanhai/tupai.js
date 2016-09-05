@@ -61,7 +61,6 @@
     var mLoadingQueue={};
     var mRemoteBaseUrl = 'js/';
     var mGlobalUtils = undefined;
-    var mAutoLoad = true;
     var mCacheEnabled = true;
     function mergeClassByClassPath(packageObj, classPath) {
 
@@ -91,30 +90,7 @@
                 arr.push(packageObj);
             }
 
-            if(!mAutoLoad) return;
-            // add script to head
-            var s = document.createElement('script');
-            s.type = 'text/javascript';
-            s.async = true;
-            if (window.ActiveXObject) {
-                s.onreadystatechange = function() {
-                    if (s.readyState == 'complete' || s.readyState == 'loaded')  {
-                        didJSLoaded(classPath);
-                    }
-                };
-            } else {
-                s.onload = function(){
-                    didJSLoaded(classPath);
-                };
-            }
-            var src = mRemoteBaseUrl + classPath.split('.').join('/') + '.js';
-            if(!mCacheEnabled) {
-                src += '?' + (Date.now?Date.now():(+new Date()));
-            }
-            s.src = src;
-            document.getElementsByTagName('head')[0].appendChild(s);
-
-            //throw new Error('cannot find package!' + classPath);
+            return;
         } else {
             cp[className] = classObj;
         }
@@ -261,9 +237,6 @@
     };
     global.Package.setBaseUrl = function(url) {
         mRemoteBaseUrl = url;
-    };
-    global.Package.setAutoLoad = function(autoLoad) {
-        mAutoLoad = autoLoad;
     };
     global.Package.setCacheEnabled = function(cacheEnabled) {
         mCacheEnabled = cacheEnabled;
