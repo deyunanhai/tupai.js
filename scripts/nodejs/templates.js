@@ -53,7 +53,7 @@ function compileTemplate(url, output, packageName, options) {
                 }
                 var tempUrl = info.path;
                 compile(tempUrl, function(code) {
-                    fs.unlink(tempUrl);
+                    fs.unlinkSync(tempUrl);
                     options && options.end && options.end(code, url);
                 });
             });
