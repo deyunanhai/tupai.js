@@ -27,7 +27,7 @@
   "dependencies": {
     "chokidar": "1.2.0",
     "commander": "2.0.0",
-    "ejs": "0.8.4",
+    "ejs": "3.0.1",
     "express": "3.3.1",
     "html-minifier": "0.6.9",
     "http-proxy": "1.12.0",
